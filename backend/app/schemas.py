@@ -257,3 +257,70 @@ class UserSettingsUpdate(BaseModel):
 class UserSettingsResponse(BaseModel):
     """Schema for user settings response."""
     theme: str  # "light", "dark", or "auto"
+
+
+class SentimentScore(BaseModel):
+    """Schema for sentiment scores."""
+    positive: float
+    negative: float
+    neutral: float
+
+
+class BiasScore(BaseModel):
+    """Schema for bias metrics."""
+    political_lean: str  # "left", "center", "right", "unknown"
+    lean_score: float  # -1.0 (left) to 1.0 (right)
+    loaded_language_count: int
+    emotional_language_score: float
+
+
+class SourceAnalysis(BaseModel):
+    """Schema for per-source analysis."""
+    source_name: str
+    sentiment: SentimentScore
+    bias: BiasScore
+    article_count: int
+
+
+class FactCheck(BaseModel):
+    """Schema for fact check results."""
+    claim: str
+    verdict: str  # "true", "false", "partially-true", "unverified", "misleading"
+    confidence: float  # 0.0 to 1.0
+    explanation: str
+    sources: List[str]
+
+
+class EventData(BaseModel):
+    """Schema for extracted events."""
+    title: str
+    description: str
+    timestamp: Optional[str] = None
+    category: str  # "political", "economic", "social", "conflict", "disaster", etc.
+    importance: int  # 1-10 scale
+
+
+class Prediction(BaseModel):
+    """Schema for forecasting predictions."""
+    scenario: str
+    probability: float  # 0.0 to 1.0
+    timeframe: str  # "short-term", "medium-term", "long-term"
+    reasoning: str
+    related_events: List[str]
+
+
+class StoryAnalyticsResponse(BaseModel):
+    """Schema for story analytics response."""
+    story_version_id: int
+    created_at: datetime
+    overall_sentiment: Optional[str] = None
+    sentiment_score: Optional[SentimentScore] = None
+    bias_score: Optional[BiasScore] = None
+    bias_indicators: Optional[Dict[str, Any]] = None
+    source_analysis: Optional[List[SourceAnalysis]] = None
+    fact_checks: Optional[List[FactCheck]] = None
+    predictions: Optional[List[Prediction]] = None
+    events: Optional[List[EventData]] = None
+
+    class Config:
+        from_attributes = True
