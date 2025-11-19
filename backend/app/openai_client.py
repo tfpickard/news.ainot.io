@@ -1,4 +1,18 @@
-"""OpenAI API client wrapper for story generation."""
+"""OpenAI API client wrapper for story generation.
+
+GPT-5 Model Optimization:
+- Uses Responses API with reasoning and verbosity parameters
+- GPT-5 models (including gpt-5-mini, gpt-5.1) do NOT support temperature, top_p, or logprobs
+- Instead uses: reasoning.effort (minimal/low/medium/high) and text.verbosity (low/medium/high)
+- Note: gpt-5-mini supports 'minimal' instead of 'none' for reasoning effort
+- Reasoning effort is tuned per task:
+  * Story generation: low (configurable via settings)
+  * Summary generation: minimal (simple task, speed prioritized)
+  * Context summary: low (needs coherence)
+  * Image prompts: low (creative task)
+  * Quote extraction: low (needs to identify absurd juxtapositions)
+- Usage stats: Responses API uses input_tokens/output_tokens instead of prompt_tokens/completion_tokens
+"""
 
 import logging
 from typing import Dict, Any, Optional
@@ -41,40 +55,49 @@ class StoryGenerator:
         )
 
         try:
-            logger.info("Calling OpenAI API for story generation")
+            logger.info("Calling OpenAI Responses API for story generation")
 
             if "gpt-5" in self.model:
-                response = self.client.chat.completions.create(
+                # GPT-5 models use reasoning and verbosity parameters instead of temperature
+                response = self.client.responses.create(
                     model=self.model,
-                    messages=[
-                        {"role": "system", "content": system_message},
-                        {"role": "user", "content": user_message},
-                    ],
-                    # temperature=settings.singl_temperature,
-                    max_completion_tokens=settings.singl_max_tokens,
+                    instructions=system_message,
+                    input=user_message,
+                    max_output_tokens=settings.singl_max_tokens,
+                    reasoning={"effort": settings.singl_reasoning_effort},
+                    text={"verbosity": settings.singl_text_verbosity},
                 )
             else:
-                response = self.client.chat.completions.create(
+                # Non-GPT-5 models use traditional temperature parameter
+                response = self.client.responses.create(
                     model=self.model,
-                    messages=[
-                        {"role": "system", "content": system_message},
-                        {"role": "user", "content": user_message},
-                    ],
+                    instructions=system_message,
+                    input=user_message,
                     temperature=settings.singl_temperature,
-                    max_tokens=settings.singl_max_tokens,
+                    max_output_tokens=settings.singl_max_tokens,
                 )
 
-            story_text = response.choices[0].message.content.strip()
+            story_text = response.output_text.strip()
 
             # Generate summary
             summary = self._generate_summary(story_text)
 
             # Extract usage stats
-            usage = {
-                "prompt_tokens": response.usage.prompt_tokens,
-                "completion_tokens": response.usage.completion_tokens,
-                "total_tokens": response.usage.total_tokens,
-            }
+            # Responses API uses different attribute names than Chat Completions
+            usage = {}
+            if hasattr(response, 'usage') and response.usage:
+                # Responses API uses input_tokens/output_tokens instead of prompt_tokens/completion_tokens
+                usage = {
+                    "prompt_tokens": getattr(response.usage, 'input_tokens', 0),
+                    "completion_tokens": getattr(response.usage, 'output_tokens', 0),
+                    "total_tokens": getattr(response.usage, 'total_tokens', 0),
+                }
+            else:
+                usage = {
+                    "prompt_tokens": 0,
+                    "completion_tokens": 0,
+                    "total_tokens": 0,
+                }
 
             logger.info(
                 f"Story generated successfully. Tokens used: {usage['total_tokens']}"
@@ -143,33 +166,25 @@ Continue the narrative with absolute journalistic authority, as if this total co
         """Generate a brief summary of the story text."""
         try:
             if "gpt-5" in self.model:
-                response = self.client.chat.completions.create(
+                # Use minimal reasoning for simple summarization task
+                response = self.client.responses.create(
                     model=self.model,
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": "Generate a one-sentence summary of this news coverage that captures its essence:",
-                        },
-                        {"role": "user", "content": story_text[:2000]},  # Limit input
-                    ],
-                    # temperature=0.5,
-                    max_completion_tokens=100,
+                    instructions="Generate a one-sentence summary of this news coverage that captures its essence:",
+                    input=story_text[:2000],  # Limit input
+                    max_output_tokens=100,
+                    reasoning={"effort": "minimal"},  # Simple task, minimal reasoning
+                    text={"verbosity": "low"},  # Short output desired
                 )
             else:
-                response = self.client.chat.completions.create(
+                response = self.client.responses.create(
                     model=self.model,
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": "Generate a one-sentence summary of this news coverage that captures its essence:",
-                        },
-                        {"role": "user", "content": story_text[:2000]},  # Limit input
-                    ],
+                    instructions="Generate a one-sentence summary of this news coverage that captures its essence:",
+                    input=story_text[:2000],  # Limit input
                     temperature=0.5,
-                    max_tokens=100,
+                    max_output_tokens=100,
                 )
 
-            return response.choices[0].message.content.strip()
+            return response.output_text.strip()
 
         except Exception as e:
             logger.error(f"Error generating summary: {e}")
@@ -189,32 +204,24 @@ Continue the narrative with absolute journalistic authority, as if this total co
 
         try:
             if "gpt-5" in self.model:
-                response = self.client.chat.completions.create(
+                # Use low reasoning to maintain coherence and continuity
+                response = self.client.responses.create(
                     model=self.model,
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": "Condense this narrative into a coherent summary that preserves key plot points, characters, themes, and the overall arc. Maintain continuity.",
-                        },
-                        {"role": "user", "content": combined[:8000]},  # Token limit
-                    ],
-                    # temperature=0.5,
-                    max_completion_tokens=1000,
+                    instructions="Condense this narrative into a coherent summary that preserves key plot points, characters, themes, and the overall arc. Maintain continuity.",
+                    input=combined[:8000],  # Token limit
+                    max_output_tokens=1000,
+                    reasoning={"effort": "low"},  # Needs some reasoning for coherence
+                    text={"verbosity": "medium"},  # Balanced output length
                 )
             else:
-                response = self.client.chat.completions.create(
+                response = self.client.responses.create(
                     model=self.model,
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": "Condense this narrative into a coherent summary that preserves key plot points, characters, themes, and the overall arc. Maintain continuity.",
-                        },
-                        {"role": "user", "content": combined[:8000]},  # Token limit
-                    ],
+                    instructions="Condense this narrative into a coherent summary that preserves key plot points, characters, themes, and the overall arc. Maintain continuity.",
+                    input=combined[:8000],  # Token limit
                     temperature=0.5,
-                    max_tokens=1000,
+                    max_output_tokens=1000,
                 )
-            return response.choices[0].message.content.strip()
+            return response.output_text.strip()
 
         except Exception as e:
             logger.error(f"Error generating context summary: {e}")
@@ -310,32 +317,25 @@ Do not include text, words, or letters in the image. Focus on visual metaphors a
             user_message = f"Create a surreal image prompt for this news story:\n\n{summary_to_use[:500]}"
 
             if "gpt-5" in settings.singl_model_name:
-                response = self.client.chat.completions.create(
+                # Use low reasoning for creative visual prompt generation
+                response = self.client.responses.create(
                     model=settings.singl_model_name,
-                    messages=[
-                        {"role": "system", "content": system_message},
-                        {"role": "user", "content": user_message},
-                    ],
-                    max_completion_tokens=150,
+                    instructions=system_message,
+                    input=user_message,
+                    max_output_tokens=150,
+                    reasoning={"effort": "low"},  # Creative task benefits from some reasoning
+                    text={"verbosity": "low"},  # Keep prompts concise
                 )
             else:
-                response = self.client.chat.completions.create(
+                response = self.client.responses.create(
                     model=settings.singl_model_name,
-                    messages=[
-                        {"role": "system", "content": system_message},
-                        {"role": "user", "content": user_message},
-                    ],
+                    instructions=system_message,
+                    input=user_message,
                     temperature=0.9,  # High creativity for visual prompts
-                    max_tokens=150,
+                    max_output_tokens=150,
                 )
 
-            prompt = response.choices[0].message.content.strip()
-
-            # Validate that we got a non-empty prompt
-            if not prompt:
-                logger.warning("GPT returned empty prompt, using fallback")
-                prompt = f"A surreal artistic representation of: {summary_to_use[:200]}"
-
+            prompt = response.output_text.strip()
             return prompt
 
         except Exception as e:
