@@ -3,7 +3,25 @@
 import { writable } from 'svelte/store';
 import type { StoryVersion } from './api';
 
-const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws/story';
+// Dynamically determine WebSocket URL based on environment
+// In production: use same host with wss/ws based on protocol
+// In development: use localhost:8001 (or environment variable)
+const getWebSocketUrl = () => {
+	if (import.meta.env.VITE_WS_URL) {
+		return import.meta.env.VITE_WS_URL;
+	}
+
+	if (import.meta.env.DEV) {
+		return 'ws://localhost:8001/ws/story';
+	}
+
+	// Production: use current host with appropriate protocol
+	const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+	const host = window.location.host;
+	return `${protocol}//${host}/ws/story`;
+};
+
+const WS_URL = getWebSocketUrl();
 
 type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
 
