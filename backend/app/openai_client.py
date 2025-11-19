@@ -3,13 +3,15 @@
 GPT-5 Model Optimization:
 - Uses Responses API with reasoning and verbosity parameters
 - GPT-5 models (including gpt-5-mini, gpt-5.1) do NOT support temperature, top_p, or logprobs
-- Instead uses: reasoning.effort (none/low/medium/high) and text.verbosity (low/medium/high)
+- Instead uses: reasoning.effort (minimal/low/medium/high) and text.verbosity (low/medium/high)
+- Note: gpt-5-mini supports 'minimal' instead of 'none' for reasoning effort
 - Reasoning effort is tuned per task:
   * Story generation: low (configurable via settings)
-  * Summary generation: none (simple task, speed prioritized)
+  * Summary generation: minimal (simple task, speed prioritized)
   * Context summary: low (needs coherence)
   * Image prompts: low (creative task)
   * Quote extraction: low (needs to identify absurd juxtapositions)
+- Usage stats: Responses API uses input_tokens/output_tokens instead of prompt_tokens/completion_tokens
 """
 
 import logging
@@ -81,12 +83,21 @@ class StoryGenerator:
             summary = self._generate_summary(story_text)
 
             # Extract usage stats
-            # Responses API uses the same usage structure
-            usage = {
-                "prompt_tokens": response.usage.prompt_tokens if hasattr(response, 'usage') else 0,
-                "completion_tokens": response.usage.completion_tokens if hasattr(response, 'usage') else 0,
-                "total_tokens": response.usage.total_tokens if hasattr(response, 'usage') else 0,
-            }
+            # Responses API uses different attribute names than Chat Completions
+            usage = {}
+            if hasattr(response, 'usage') and response.usage:
+                # Responses API uses input_tokens/output_tokens instead of prompt_tokens/completion_tokens
+                usage = {
+                    "prompt_tokens": getattr(response.usage, 'input_tokens', 0),
+                    "completion_tokens": getattr(response.usage, 'output_tokens', 0),
+                    "total_tokens": getattr(response.usage, 'total_tokens', 0),
+                }
+            else:
+                usage = {
+                    "prompt_tokens": 0,
+                    "completion_tokens": 0,
+                    "total_tokens": 0,
+                }
 
             logger.info(
                 f"Story generated successfully. Tokens used: {usage['total_tokens']}"
@@ -161,7 +172,7 @@ Continue the narrative with absolute journalistic authority, as if this total co
                     instructions="Generate a one-sentence summary of this news coverage that captures its essence:",
                     input=story_text[:2000],  # Limit input
                     max_output_tokens=100,
-                    reasoning={"effort": "none"},  # Simple task, no reasoning needed
+                    reasoning={"effort": "minimal"},  # Simple task, minimal reasoning
                     text={"verbosity": "low"},  # Short output desired
                 )
             else:

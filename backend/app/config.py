@@ -84,7 +84,7 @@ class Settings(BaseSettings):
     singl_max_tokens: int = 4000
 
     # GPT-5 specific parameters (not supported by other models)
-    singl_reasoning_effort: str = "low"  # none, low, medium, high
+    singl_reasoning_effort: str = "low"  # minimal, low, medium, high
     singl_text_verbosity: str = "medium"  # low, medium, high
 
     # App
