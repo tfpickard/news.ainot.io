@@ -127,8 +127,18 @@ Return your analysis as JSON with:
                     max_output_tokens=500,
                 )
 
-            result = json.loads(response.output_text.strip())
-            return result
+            output_text = response.output_text.strip()
+            try:
+                result = json.loads(output_text)
+                return result
+            except json.JSONDecodeError as je:
+                logger.error(f"Failed to parse sentiment JSON: {je}")
+                logger.debug(f"Raw output: {output_text[:500]}")
+                return {
+                    "overall": "neutral",
+                    "score": {"positive": 0.33, "negative": 0.33, "neutral": 0.34},
+                    "reasoning": "JSON parsing failed"
+                }
 
         except Exception as e:
             logger.error(f"Sentiment analysis failed: {e}")
@@ -175,8 +185,22 @@ Return JSON with:
                     max_output_tokens=800,
                 )
 
-            result = json.loads(response.output_text.strip())
-            return result
+            output_text = response.output_text.strip()
+            try:
+                result = json.loads(output_text)
+                return result
+            except json.JSONDecodeError as je:
+                logger.error(f"Failed to parse bias JSON: {je}")
+                logger.debug(f"Raw output: {output_text[:500]}")
+                return {
+                    "score": {
+                        "political_lean": "unknown",
+                        "lean_score": 0.0,
+                        "loaded_language_count": 0,
+                        "emotional_language_score": 0.0
+                    },
+                    "indicators": {"loaded_terms": [], "omissions": [], "framing": "JSON parsing failed"}
+                }
 
         except Exception as e:
             logger.error(f"Bias analysis failed: {e}")
@@ -268,8 +292,14 @@ Focus on verifiable facts, not opinions. Mark as "unverified" if you cannot dete
                     max_output_tokens=1500,
                 )
 
-            result = json.loads(response.output_text.strip())
-            return result.get("fact_checks", [])
+            output_text = response.output_text.strip()
+            try:
+                result = json.loads(output_text)
+                return result.get("fact_checks", [])
+            except json.JSONDecodeError as je:
+                logger.error(f"Failed to parse fact checking JSON: {je}")
+                logger.debug(f"Raw output: {output_text[:500]}")
+                return []
 
         except Exception as e:
             logger.error(f"Fact checking failed: {e}")
@@ -310,8 +340,14 @@ Provide 3-5 diverse predictions ranging from likely to possible."""
                     max_output_tokens=1500,
                 )
 
-            result = json.loads(response.output_text.strip())
-            return result.get("predictions", [])
+            output_text = response.output_text.strip()
+            try:
+                result = json.loads(output_text)
+                return result.get("predictions", [])
+            except json.JSONDecodeError as je:
+                logger.error(f"Failed to parse predictions JSON: {je}")
+                logger.debug(f"Raw output: {output_text[:500]}")
+                return []
 
         except Exception as e:
             logger.error(f"Prediction generation failed: {e}")
@@ -352,8 +388,14 @@ Extract 5-10 most important events."""
                     max_output_tokens=1200,
                 )
 
-            result = json.loads(response.output_text.strip())
-            return result.get("events", [])
+            output_text = response.output_text.strip()
+            try:
+                result = json.loads(output_text)
+                return result.get("events", [])
+            except json.JSONDecodeError as je:
+                logger.error(f"Failed to parse events JSON: {je}")
+                logger.debug(f"Raw output: {output_text[:500]}")
+                return []
 
         except Exception as e:
             logger.error(f"Event extraction failed: {e}")
