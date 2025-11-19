@@ -80,8 +80,12 @@ class Settings(BaseSettings):
     singl_image_quality: str = "standard"
 
     # Fine-tuning Controls
-    singl_temperature: float = 0.8
+    singl_temperature: float = 0.8  # Only used for non-GPT-5 models
     singl_max_tokens: int = 4000
+
+    # GPT-5 specific parameters (not supported by other models)
+    singl_reasoning_effort: str = "low"  # none, low, medium, high
+    singl_text_verbosity: str = "medium"  # low, medium, high
 
     # App
     app_name: str = "Singl News Backend"

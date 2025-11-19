@@ -1,4 +1,16 @@
-"""OpenAI API client wrapper for story generation."""
+"""OpenAI API client wrapper for story generation.
+
+GPT-5 Model Optimization:
+- Uses Responses API with reasoning and verbosity parameters
+- GPT-5 models (including gpt-5-mini, gpt-5.1) do NOT support temperature, top_p, or logprobs
+- Instead uses: reasoning.effort (none/low/medium/high) and text.verbosity (low/medium/high)
+- Reasoning effort is tuned per task:
+  * Story generation: low (configurable via settings)
+  * Summary generation: none (simple task, speed prioritized)
+  * Context summary: low (needs coherence)
+  * Image prompts: low (creative task)
+  * Quote extraction: low (needs to identify absurd juxtapositions)
+"""
 
 import logging
 from typing import Dict, Any, Optional
@@ -44,13 +56,17 @@ class StoryGenerator:
             logger.info("Calling OpenAI Responses API for story generation")
 
             if "gpt-5" in self.model:
+                # GPT-5 models use reasoning and verbosity parameters instead of temperature
                 response = self.client.responses.create(
                     model=self.model,
                     instructions=system_message,
                     input=user_message,
                     max_completion_tokens=settings.singl_max_tokens,
+                    reasoning={"effort": settings.singl_reasoning_effort},
+                    text={"verbosity": settings.singl_text_verbosity},
                 )
             else:
+                # Non-GPT-5 models use traditional temperature parameter
                 response = self.client.responses.create(
                     model=self.model,
                     instructions=system_message,
@@ -139,11 +155,14 @@ Continue the narrative with absolute journalistic authority, as if this total co
         """Generate a brief summary of the story text."""
         try:
             if "gpt-5" in self.model:
+                # Use minimal reasoning for simple summarization task
                 response = self.client.responses.create(
                     model=self.model,
                     instructions="Generate a one-sentence summary of this news coverage that captures its essence:",
                     input=story_text[:2000],  # Limit input
                     max_completion_tokens=100,
+                    reasoning={"effort": "none"},  # Simple task, no reasoning needed
+                    text={"verbosity": "low"},  # Short output desired
                 )
             else:
                 response = self.client.responses.create(
@@ -174,11 +193,14 @@ Continue the narrative with absolute journalistic authority, as if this total co
 
         try:
             if "gpt-5" in self.model:
+                # Use low reasoning to maintain coherence and continuity
                 response = self.client.responses.create(
                     model=self.model,
                     instructions="Condense this narrative into a coherent summary that preserves key plot points, characters, themes, and the overall arc. Maintain continuity.",
                     input=combined[:8000],  # Token limit
                     max_completion_tokens=1000,
+                    reasoning={"effort": "low"},  # Needs some reasoning for coherence
+                    text={"verbosity": "medium"},  # Balanced output length
                 )
             else:
                 response = self.client.responses.create(
@@ -271,11 +293,14 @@ Do not include text, words, or letters in the image. Focus on visual metaphors a
             user_message = f"Create a surreal image prompt for this news story:\n\n{story_summary[:500]}"
 
             if "gpt-5" in settings.singl_model_name:
+                # Use low reasoning for creative visual prompt generation
                 response = self.client.responses.create(
                     model=settings.singl_model_name,
                     instructions=system_message,
                     input=user_message,
                     max_completion_tokens=150,
+                    reasoning={"effort": "low"},  # Creative task benefits from some reasoning
+                    text={"verbosity": "low"},  # Keep prompts concise
                 )
             else:
                 response = self.client.responses.create(
