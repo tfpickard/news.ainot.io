@@ -1,6 +1,7 @@
 /* Global styles for Singl News */
 
 :root {
+	/* Light mode (default) */
 	--color-text: #1a1a1a;
 	--color-text-light: #4a4a4a;
 	--color-background: #ffffff;
@@ -17,6 +18,28 @@
 	--spacing-md: 1.5rem;
 	--spacing-lg: 2rem;
 	--spacing-xl: 3rem;
+}
+
+/* Dark mode */
+:root[data-theme="dark"] {
+	--color-text: #e0e0e0;
+	--color-text-light: #b0b0b0;
+	--color-background: #1a1a1a;
+	--color-border: #404040;
+	--color-accent: #4d9fff;
+	--color-highlight: #2a2a2a;
+}
+
+/* Auto mode - prefer user's system preference */
+@media (prefers-color-scheme: dark) {
+	:root[data-theme="auto"] {
+		--color-text: #e0e0e0;
+		--color-text-light: #b0b0b0;
+		--color-background: #1a1a1a;
+		--color-border: #404040;
+		--color-accent: #4d9fff;
+		--color-highlight: #2a2a2a;
+	}
 }
 
 * {

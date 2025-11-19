@@ -247,3 +247,13 @@ class ConfigResponse(BaseModel):
     singl_image_size: str
     singl_image_quality: str
     feed_count: int
+
+
+class UserSettingsUpdate(BaseModel):
+    """Schema for updating user settings."""
+    theme: Optional[str] = None  # "light", "dark", or "auto"
+
+
+class UserSettingsResponse(BaseModel):
+    """Schema for user settings response."""
+    theme: str  # "light", "dark", or "auto"

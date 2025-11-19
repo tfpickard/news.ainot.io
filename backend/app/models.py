@@ -80,3 +80,18 @@ class GeneratedImage(Base):
 
     def __repr__(self):
         return f"<GeneratedImage(id={self.id}, story_version_id={self.story_version_id})>"
+
+
+class UserSettings(Base):
+    """Stores user preferences and application settings."""
+
+    __tablename__ = "user_settings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    key = Column(String, nullable=False, unique=True, index=True)  # Setting key (e.g., "theme", "model_name")
+    value = Column(JSON, nullable=False)  # Setting value (flexible JSON storage)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    def __repr__(self):
+        return f"<UserSettings(key='{self.key}', value={self.value})>"
