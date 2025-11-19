@@ -170,3 +170,14 @@ class FeedConfigurationResponse(FeedConfigurationBase):
 
     class Config:
         from_attributes = True
+
+
+class LoginRequest(BaseModel):
+    """Schema for login request."""
+    password: str
+
+
+class LoginResponse(BaseModel):
+    """Schema for login response."""
+    api_key: str
+    message: str

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { api } from '$lib/api';
+	import { authFetch } from '$lib/auth';
 	import PasswordProtect from '$lib/components/PasswordProtect.svelte';
 
 	interface FeedConfig {
@@ -38,7 +39,7 @@
 	async function loadFeeds() {
 		try {
 			loading = true;
-			const response = await fetch('/api/feeds');
+			const response = await authFetch('/api/feeds');
 			if (!response.ok) throw new Error('Failed to load feeds');
 			feeds = await response.json();
 			loading = false;
@@ -85,7 +86,7 @@
 
 			if (editingFeed) {
 				// Update existing feed
-				const response = await fetch(`/api/feeds/${editingFeed.id}`, {
+				const response = await authFetch(`/api/feeds/${editingFeed.id}`, {
 					method: 'PUT',
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify(payload)
@@ -93,7 +94,7 @@
 				if (!response.ok) throw new Error('Failed to update feed');
 			} else {
 				// Create new feed
-				const response = await fetch('/api/feeds', {
+				const response = await authFetch('/api/feeds', {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify(payload)
@@ -112,7 +113,7 @@
 		if (!confirm('Are you sure you want to delete this feed?')) return;
 
 		try {
-			const response = await fetch(`/api/feeds/${id}`, {
+			const response = await authFetch(`/api/feeds/${id}`, {
 				method: 'DELETE'
 			});
 			if (!response.ok) throw new Error('Failed to delete feed');
@@ -124,7 +125,7 @@
 
 	async function toggleActive(feed: FeedConfig) {
 		try {
-			const response = await fetch(`/api/feeds/${feed.id}`, {
+			const response = await authFetch(`/api/feeds/${feed.id}`, {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ is_active: !feed.is_active })
@@ -141,7 +142,7 @@
 			return;
 
 		try {
-			const response = await fetch('/api/feeds/import-defaults', {
+			const response = await authFetch('/api/feeds/import-defaults', {
 				method: 'POST'
 			});
 			if (!response.ok) throw new Error('Failed to import defaults');

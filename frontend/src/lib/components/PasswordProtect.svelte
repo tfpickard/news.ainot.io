@@ -1,61 +1,46 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { getAuthState, login, verifyAuth, clearAuth } from '$lib/auth';
 
 	export let pageName: string = 'Admin';
-
-	const STORAGE_KEY = 'singl_admin_auth';
-	const SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
 	let isAuthenticated = false;
 	let password = '';
 	let error = '';
 	let loading = true;
+	let loggingIn = false;
 
-	onMount(() => {
-		checkAuth();
-	});
-
-	function checkAuth() {
-		const stored = localStorage.getItem(STORAGE_KEY);
-		if (stored) {
-			try {
-				const auth = JSON.parse(stored);
-				const now = Date.now();
-				if (auth.expires > now) {
-					isAuthenticated = true;
-					loading = false;
-					return;
-				}
-			} catch (e) {
-				// Invalid stored auth, clear it
-				localStorage.removeItem(STORAGE_KEY);
+	onMount(async () => {
+		const authState = getAuthState();
+		if (authState.isAuthenticated) {
+			// Verify the stored API key is still valid
+			const valid = await verifyAuth();
+			if (valid) {
+				isAuthenticated = true;
+			} else {
+				clearAuth();
 			}
 		}
 		loading = false;
-	}
+	});
 
 	async function handleSubmit() {
 		error = '';
+		loggingIn = true;
 
-		// Simple password check - in production, this would be server-side
-		// For now, we'll use an environment variable or default password
-		const correctPassword = import.meta.env.VITE_ADMIN_PASSWORD || 'singl2025';
-
-		if (password === correctPassword) {
-			const auth = {
-				authenticated: true,
-				expires: Date.now() + SESSION_DURATION
-			};
-			localStorage.setItem(STORAGE_KEY, JSON.stringify(auth));
+		try {
+			await login(password);
 			isAuthenticated = true;
-		} else {
-			error = 'Incorrect password';
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Login failed';
 			password = '';
+		} finally {
+			loggingIn = false;
 		}
 	}
 
 	function handleLogout() {
-		localStorage.removeItem(STORAGE_KEY);
+		clearAuth();
 		isAuthenticated = false;
 		password = '';
 	}
@@ -70,7 +55,7 @@
 		<div class="auth-container">
 			<div class="auth-header">
 				<h1>{pageName}</h1>
-				<p>Password required</p>
+				<p>Authentication required</p>
 			</div>
 
 			<form on:submit|preventDefault={handleSubmit} class="auth-form">
@@ -83,6 +68,7 @@
 						placeholder="Enter password"
 						autocomplete="current-password"
 						autofocus
+						disabled={loggingIn}
 					/>
 				</div>
 
@@ -90,11 +76,20 @@
 					<div class="error-message">{error}</div>
 				{/if}
 
-				<button type="submit" class="submit-btn">Unlock</button>
+				<button type="submit" class="submit-btn" disabled={loggingIn}>
+					{loggingIn ? 'Authenticating...' : 'Unlock'}
+				</button>
 			</form>
 
 			<div class="auth-footer">
 				<a href="/" class="back-link">← Back to THE STORY</a>
+			</div>
+
+			<div class="auth-info">
+				<p class="info-text">
+					<strong>Note:</strong> Password is set via <code>SINGL_ADMIN_PASSWORD</code> environment
+					variable. Default: <code>singl2025</code>
+				</p>
 			</div>
 		</div>
 	</div>
@@ -131,7 +126,7 @@
 		border: 3px solid var(--color-text);
 		border-radius: 8px;
 		padding: var(--spacing-xl);
-		max-width: 400px;
+		max-width: 450px;
 		width: 100%;
 		box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
 	}
@@ -184,6 +179,11 @@
 		border-color: var(--color-text);
 	}
 
+	.form-group input:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
+	}
+
 	.error-message {
 		font-family: var(--font-sans);
 		font-size: 0.875rem;
@@ -209,14 +209,20 @@
 		transition: all 0.2s;
 	}
 
-	.submit-btn:hover {
+	.submit-btn:hover:not(:disabled) {
 		background: var(--color-text-light);
+	}
+
+	.submit-btn:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
 	}
 
 	.auth-footer {
 		text-align: center;
 		padding-top: var(--spacing-md);
 		border-top: 1px solid var(--color-border);
+		margin-bottom: var(--spacing-md);
 	}
 
 	.back-link {
@@ -229,6 +235,28 @@
 
 	.back-link:hover {
 		color: var(--color-text);
+	}
+
+	.auth-info {
+		padding: var(--spacing-sm);
+		background: var(--color-highlight);
+		border-radius: 4px;
+	}
+
+	.info-text {
+		font-family: var(--font-sans);
+		font-size: 0.75rem;
+		color: var(--color-text-light);
+		margin: 0;
+		line-height: 1.5;
+	}
+
+	.info-text code {
+		background: white;
+		padding: 2px 6px;
+		border-radius: 3px;
+		font-family: monospace;
+		font-size: 0.85em;
 	}
 
 	.protected-content {

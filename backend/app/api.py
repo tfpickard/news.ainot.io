@@ -1,12 +1,14 @@
 """REST API endpoints."""
 import logging
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from typing import List
 
 from .database import get_db
 from .story_service import StoryService
 from .quote_service import QuoteExtractor
+from .image_service import QuoteImageGenerator
 from .models import FeedItem, FeedConfiguration
 from .schemas import (
     StoryVersionResponse,
@@ -22,8 +24,11 @@ from .schemas import (
     FeedConfigurationResponse,
     FeedConfigurationCreate,
     FeedConfigurationUpdate,
+    LoginRequest,
+    LoginResponse,
 )
 from .config import settings
+from .auth import require_auth, get_admin_api_key
 
 logger = logging.getLogger(__name__)
 
@@ -162,6 +167,57 @@ def get_story_quotes(story_id: int, count: int = 5, db: Session = Depends(get_db
     return QuotesResponse(
         story_id=story_id,
         quotes=[QuoteResponse(**q) for q in quotes]
+    )
+
+
+@router.get("/story/{story_id}/quote-image")
+def get_quote_image(
+    story_id: int,
+    quote_index: int = 0,
+    db: Session = Depends(get_db)
+):
+    """
+    Generate a shareable quote card image.
+
+    Args:
+        story_id: Story version ID
+        quote_index: Index of the quote to generate image for (0-based, default 0)
+
+    Returns:
+        PNG image of the quote card
+    """
+    service = StoryService(db)
+    story = service.get_story_by_id(story_id)
+
+    if not story:
+        raise HTTPException(status_code=404, detail=f"Story {story_id} not found")
+
+    # Extract quotes
+    extractor = QuoteExtractor()
+    quotes = extractor.extract_quotes(story.full_text, count=10)
+
+    if not quotes or quote_index >= len(quotes):
+        raise HTTPException(
+            status_code=404,
+            detail=f"Quote index {quote_index} not found (story has {len(quotes)} quotes)"
+        )
+
+    quote = quotes[quote_index]
+
+    # Generate image
+    generator = QuoteImageGenerator()
+    image_bytes = generator.generate_quote_image(
+        quote_text=quote['text'],
+        category=quote['category'],
+        absurdity_score=quote['absurdity_score']
+    )
+
+    return StreamingResponse(
+        image_bytes,
+        media_type="image/png",
+        headers={
+            "Content-Disposition": f"inline; filename=singl_quote_{story_id}_{quote_index}.png"
+        }
     )
 
 
@@ -333,12 +389,53 @@ def get_api_docs():
     )
 
 
-# Feed Configuration Management Endpoints
+# Admin authentication endpoints
+
+@router.post("/auth/login", response_model=LoginResponse)
+async def login(request: LoginRequest):
+    """
+    Exchange password for API key.
+
+    Args:
+        request: Login request with password
+
+    Returns:
+        API key if password is correct
+    """
+    import os
+    admin_password = os.getenv('SINGL_ADMIN_PASSWORD', 'singl2025')
+
+    if request.password != admin_password:
+        raise HTTPException(status_code=401, detail="Invalid password")
+
+    return LoginResponse(
+        api_key=get_admin_api_key(),
+        message="Store this key securely. Use it in Authorization: Bearer {key} header."
+    )
+
+
+@router.post("/auth/verify")
+async def verify_auth(auth: str = Depends(require_auth)):
+    """Verify authentication credentials."""
+    return {"authenticated": True, "message": "Valid credentials"}
+
+
+@router.get("/auth/key")
+async def get_api_key_info(auth: str = Depends(require_auth)):
+    """Get API key information (for already authenticated users)."""
+    return {
+        "key": get_admin_api_key(),
+        "message": "Store this key securely. It will not be shown again."
+    }
+
+
+# Feed Configuration Management Endpoints (Protected)
 
 @router.get("/feeds", response_model=List[FeedConfigurationResponse])
 def get_feeds(
     active_only: bool = False,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    auth: str = Depends(require_auth)
 ):
     """
     Get all configured RSS feeds.
@@ -356,7 +453,7 @@ def get_feeds(
 
 
 @router.get("/feeds/{feed_id}", response_model=FeedConfigurationResponse)
-def get_feed(feed_id: int, db: Session = Depends(get_db)):
+def get_feed(feed_id: int, db: Session = Depends(get_db), auth: str = Depends(require_auth)):
     """Get a specific feed configuration by ID."""
     feed = db.query(FeedConfiguration).filter(FeedConfiguration.id == feed_id).first()
 
@@ -367,7 +464,7 @@ def get_feed(feed_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/feeds", response_model=FeedConfigurationResponse)
-def create_feed(feed: FeedConfigurationCreate, db: Session = Depends(get_db)):
+def create_feed(feed: FeedConfigurationCreate, db: Session = Depends(get_db), auth: str = Depends(require_auth)):
     """Create a new feed configuration."""
     # Check if URL already exists
     existing = db.query(FeedConfiguration).filter(FeedConfiguration.url == feed.url).first()
@@ -387,7 +484,8 @@ def create_feed(feed: FeedConfigurationCreate, db: Session = Depends(get_db)):
 def update_feed(
     feed_id: int,
     feed_update: FeedConfigurationUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    auth: str = Depends(require_auth)
 ):
     """Update an existing feed configuration."""
     db_feed = db.query(FeedConfiguration).filter(FeedConfiguration.id == feed_id).first()
@@ -418,7 +516,7 @@ def update_feed(
 
 
 @router.delete("/feeds/{feed_id}")
-def delete_feed(feed_id: int, db: Session = Depends(get_db)):
+def delete_feed(feed_id: int, db: Session = Depends(get_db), auth: str = Depends(require_auth)):
     """Delete a feed configuration."""
     db_feed = db.query(FeedConfiguration).filter(FeedConfiguration.id == feed_id).first()
 
@@ -434,7 +532,7 @@ def delete_feed(feed_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/feeds/import-defaults")
-def import_default_feeds(db: Session = Depends(get_db)):
+def import_default_feeds(db: Session = Depends(get_db), auth: str = Depends(require_auth)):
     """Import default feeds from config into database."""
     from .config import settings
 
@@ -476,7 +574,7 @@ def import_default_feeds(db: Session = Depends(get_db)):
 
 
 @router.get("/stats")
-def get_stats(db: Session = Depends(get_db)):
+def get_stats(db: Session = Depends(get_db), auth: str = Depends(require_auth)):
     """Get comprehensive statistics about THE STORY."""
     from sqlalchemy import func, distinct
     from datetime import datetime, timedelta, timezone

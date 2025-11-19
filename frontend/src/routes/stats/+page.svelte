@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { authFetch } from '$lib/auth';
 	import PasswordProtect from '$lib/components/PasswordProtect.svelte';
 
 	interface Stats {
@@ -55,7 +56,7 @@
 	async function loadStats() {
 		try {
 			loading = true;
-			const response = await fetch('/api/stats');
+			const response = await authFetch('/api/stats');
 			if (!response.ok) throw new Error('Failed to load stats');
 			stats = await response.json();
 			loading = false;

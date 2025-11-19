@@ -58,6 +58,14 @@
 			});
 		}
 	}
+
+	function downloadImage() {
+		if (selectedQuote) {
+			const quoteIndex = quotes.indexOf(selectedQuote);
+			const imageUrl = `/api/story/${storyId}/quote-image?quote_index=${quoteIndex}`;
+			window.open(imageUrl, '_blank');
+		}
+	}
 </script>
 
 {#if !loading && quotes.length > 0}
@@ -80,6 +88,9 @@
 			</div>
 
 			<div class="share-buttons">
+				<button class="share-btn download" on:click={downloadImage}>
+					🖼️ Download Image
+				</button>
 				<button class="share-btn twitter" on:click={() => shareQuote('twitter')}>
 					𝕏 Tweet
 				</button>
@@ -248,6 +259,12 @@
 		background: #28a745;
 		color: white;
 		border-color: #28a745;
+	}
+
+	.share-btn.download:hover {
+		background: #6f42c1;
+		color: white;
+		border-color: #6f42c1;
 	}
 
 	.quote-selector {
