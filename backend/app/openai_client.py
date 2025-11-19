@@ -61,7 +61,7 @@ class StoryGenerator:
                     model=self.model,
                     instructions=system_message,
                     input=user_message,
-                    max_completion_tokens=settings.singl_max_tokens,
+                    max_output_tokens=settings.singl_max_tokens,
                     reasoning={"effort": settings.singl_reasoning_effort},
                     text={"verbosity": settings.singl_text_verbosity},
                 )
@@ -72,7 +72,7 @@ class StoryGenerator:
                     instructions=system_message,
                     input=user_message,
                     temperature=settings.singl_temperature,
-                    max_completion_tokens=settings.singl_max_tokens,
+                    max_output_tokens=settings.singl_max_tokens,
                 )
 
             story_text = response.output_text.strip()
@@ -160,7 +160,7 @@ Continue the narrative with absolute journalistic authority, as if this total co
                     model=self.model,
                     instructions="Generate a one-sentence summary of this news coverage that captures its essence:",
                     input=story_text[:2000],  # Limit input
-                    max_completion_tokens=100,
+                    max_output_tokens=100,
                     reasoning={"effort": "none"},  # Simple task, no reasoning needed
                     text={"verbosity": "low"},  # Short output desired
                 )
@@ -170,7 +170,7 @@ Continue the narrative with absolute journalistic authority, as if this total co
                     instructions="Generate a one-sentence summary of this news coverage that captures its essence:",
                     input=story_text[:2000],  # Limit input
                     temperature=0.5,
-                    max_completion_tokens=100,
+                    max_output_tokens=100,
                 )
 
             return response.output_text.strip()
@@ -198,7 +198,7 @@ Continue the narrative with absolute journalistic authority, as if this total co
                     model=self.model,
                     instructions="Condense this narrative into a coherent summary that preserves key plot points, characters, themes, and the overall arc. Maintain continuity.",
                     input=combined[:8000],  # Token limit
-                    max_completion_tokens=1000,
+                    max_output_tokens=1000,
                     reasoning={"effort": "low"},  # Needs some reasoning for coherence
                     text={"verbosity": "medium"},  # Balanced output length
                 )
@@ -208,7 +208,7 @@ Continue the narrative with absolute journalistic authority, as if this total co
                     instructions="Condense this narrative into a coherent summary that preserves key plot points, characters, themes, and the overall arc. Maintain continuity.",
                     input=combined[:8000],  # Token limit
                     temperature=0.5,
-                    max_completion_tokens=1000,
+                    max_output_tokens=1000,
                 )
             return response.output_text.strip()
 
@@ -298,7 +298,7 @@ Do not include text, words, or letters in the image. Focus on visual metaphors a
                     model=settings.singl_model_name,
                     instructions=system_message,
                     input=user_message,
-                    max_completion_tokens=150,
+                    max_output_tokens=150,
                     reasoning={"effort": "low"},  # Creative task benefits from some reasoning
                     text={"verbosity": "low"},  # Keep prompts concise
                 )
@@ -308,7 +308,7 @@ Do not include text, words, or letters in the image. Focus on visual metaphors a
                     instructions=system_message,
                     input=user_message,
                     temperature=0.9,  # High creativity for visual prompts
-                    max_completion_tokens=150,
+                    max_output_tokens=150,
                 )
 
             prompt = response.output_text.strip()
