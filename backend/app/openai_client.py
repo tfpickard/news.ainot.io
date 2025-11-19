@@ -304,17 +304,21 @@ class ImageGenerator:
             # Use GPT to create a visual prompt
             system_message = """You are an art director creating visual prompts for surrealist news imagery.
 
-Given a news story summary, create a vivid, artistic image prompt that captures its essence in a single surreal scene.
-The prompt should be:
-- Visually striking and memorable
-- Surreal but coherent
-- Evocative of the story's themes
-- Suitable for DALL-E 3 generation
-- 1-2 sentences max
+Given a news story summary, extract SPECIFIC elements (people, places, objects, events, themes) from the story and transform them into a surreal visual composition.
 
-Do not include text, words, or letters in the image. Focus on visual metaphors and symbolic imagery."""
+Your prompt MUST:
+1. Identify concrete details from the story (specific names, locations, objects, actions)
+2. Transform those specific elements into impossible, dreamlike visual metaphors
+3. Combine them in a single surreal scene that would be impossible in reality
+4. Use vivid, specific imagery (not generic themes)
+5. Be 2-3 sentences describing an impossible but coherent surreal scene
+6. Be suitable for DALL-E 3 generation
 
-            user_message = f"Create a surreal image prompt for this news story:\n\n{summary_to_use[:500]}"
+IMPORTANT: Pull actual details from the story summary. If the story mentions a CEO, a hurricane, and a tech product - your scene should surreally merge THOSE specific elements, not generic business/weather imagery.
+
+Do not include text, words, or letters in the image. Focus on transforming the story's specific content into surreal visual metaphors."""
+
+            user_message = f"Extract specific elements from this story and create a surreal image prompt that impossibly merges them:\n\n{summary_to_use[:500]}"
 
             if "gpt-5" in settings.singl_model_name:
                 # Use low reasoning for creative visual prompt generation
@@ -340,8 +344,18 @@ Do not include text, words, or letters in the image. Focus on visual metaphors a
 
         except Exception as e:
             logger.error(f"Error building image prompt: {e}")
-            # Fallback to simple prompt
-            fallback = f"A surreal artistic representation of: {summary_to_use[:200]}"
+            # Fallback: try to extract key words from summary for a more specific prompt
+            if summary_to_use:
+                # Simple extraction of capitalized words and nouns for specificity
+                words = summary_to_use[:200].split()
+                capitalized = [w for w in words if w and w[0].isupper() and len(w) > 3][:5]
+                if capitalized:
+                    fallback = f"A surreal, dreamlike scene impossibly merging: {', '.join(capitalized)}, vivid colors, impossible perspective"
+                else:
+                    fallback = f"A surreal artistic representation of: {summary_to_use[:150]}, dreamlike quality"
+            else:
+                fallback = "A surreal, artistic representation of breaking news, vivid colors, dreamlike quality"
+
             # Ensure fallback is not empty
             if not fallback or len(fallback) < 10:
                 fallback = "A surreal, artistic representation of breaking news, vivid colors, dreamlike quality"
