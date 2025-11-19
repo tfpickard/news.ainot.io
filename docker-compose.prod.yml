@@ -1,0 +1,84 @@
+version: '3.8'
+
+# Production Docker Compose configuration
+# Differences from development:
+# - No volume mounts for code
+# - Optimized container settings
+# - Health checks enabled
+# - Proper restart policies
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: singl-db-prod
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-singl}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}  # Set via environment
+      POSTGRES_DB: ${POSTGRES_DB:-singl}
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-singl}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - singl-network-prod
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: singl-backend-prod
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-singl}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-singl}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      SINGL_MODEL_NAME: ${SINGL_MODEL_NAME:-gpt-4-turbo-preview}
+      SINGL_UPDATE_MINUTES: ${SINGL_UPDATE_MINUTES:-30}
+      SINGL_CONTEXT_STEPS: ${SINGL_CONTEXT_STEPS:-10}
+      SINGL_FEEDS: ${SINGL_FEEDS}
+      SINGL_LOG_LEVEL: ${SINGL_LOG_LEVEL:-WARNING}
+      SINGL_WS_ORIGIN: ${SINGL_WS_ORIGIN}
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - singl-network-prod
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/api/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: singl-frontend-prod
+    environment:
+      VITE_API_URL: ${VITE_API_URL}
+      VITE_WS_URL: ${VITE_WS_URL}
+      ORIGIN: ${ORIGIN}
+      NODE_ENV: production
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      - backend
+    networks:
+      - singl-network-prod
+    restart: unless-stopped
+
+volumes:
+  postgres_data_prod:
+    driver: local
+
+networks:
+  singl-network-prod:
+    driver: bridge

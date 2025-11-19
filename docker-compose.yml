@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:16-alpine
+    container_name: singl-db
+    environment:
+      POSTGRES_USER: singl
+      POSTGRES_PASSWORD: singl
+      POSTGRES_DB: singl
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U singl"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - singl-network
+
+  # Backend (FastAPI)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: singl-backend
+    environment:
+      DATABASE_URL: postgresql+psycopg2://singl:singl@db:5432/singl
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      SINGL_MODEL_NAME: ${SINGL_MODEL_NAME:-gpt-4-turbo-preview}
+      SINGL_UPDATE_MINUTES: ${SINGL_UPDATE_MINUTES:-30}
+      SINGL_CONTEXT_STEPS: ${SINGL_CONTEXT_STEPS:-10}
+      SINGL_FEEDS: ${SINGL_FEEDS:-http://rss.cnn.com/rss/cnn_topstories.rss,http://feeds.bbci.co.uk/news/world/rss.xml,https://www.theguardian.com/world/rss,https://rss.nytimes.com/services/xml/rss/nyt/World.xml,http://feeds.reuters.com/reuters/topNews}
+      SINGL_LOG_LEVEL: ${SINGL_LOG_LEVEL:-INFO}
+      SINGL_WS_ORIGIN: "*"
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    networks:
+      - singl-network
+    restart: unless-stopped
+
+  # Frontend (SvelteKit)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: singl-frontend
+    environment:
+      VITE_API_URL: http://localhost:8000
+      VITE_WS_URL: ws://localhost:8000/ws/story
+      ORIGIN: http://localhost:3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - singl-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  singl-network:
+    driver: bridge
