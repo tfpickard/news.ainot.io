@@ -48,26 +48,32 @@
 	let hasMore = true;
 	let offset = 0;
 
-	// Subscribe to WebSocket stores
+	// WebSocket state
 	let wsStatus = 'disconnected';
 	let wsStory: StoryVersion | null = null;
 
-	const unsubStatus = wsClient.status.subscribe((value) => {
-		wsStatus = value;
-	});
-
-	const unsubStory = wsClient.latestStory.subscribe((value) => {
-		wsStory = value;
-		if (wsStory && (stories.length === 0 || stories[0].story.id !== wsStory.id)) {
-			hasNewUpdate = true;
-		}
-	});
-
-	const unsubNewUpdate = wsClient.hasNewUpdate.subscribe((value) => {
-		hasNewUpdate = value;
-	});
+	// Unsubscribe functions (will be set in onMount)
+	let unsubStatus: (() => void) | null = null;
+	let unsubStory: (() => void) | null = null;
+	let unsubNewUpdate: (() => void) | null = null;
 
 	onMount(async () => {
+		// Subscribe to WebSocket stores (browser-only)
+		unsubStatus = wsClient.status.subscribe((value) => {
+			wsStatus = value;
+		});
+
+		unsubStory = wsClient.latestStory.subscribe((value) => {
+			wsStory = value;
+			if (wsStory && (stories.length === 0 || stories[0].story.id !== wsStory.id)) {
+				hasNewUpdate = true;
+			}
+		});
+
+		unsubNewUpdate = wsClient.hasNewUpdate.subscribe((value) => {
+			hasNewUpdate = value;
+		});
+
 		// Load initial stories
 		await loadInitialStories();
 
@@ -79,11 +85,18 @@
 	});
 
 	onDestroy(() => {
-		unsubStatus();
-		unsubStory();
-		unsubNewUpdate();
+		// Clean up subscriptions
+		if (unsubStatus) unsubStatus();
+		if (unsubStory) unsubStory();
+		if (unsubNewUpdate) unsubNewUpdate();
+
+		// Disconnect WebSocket
 		wsClient.disconnect();
-		window.removeEventListener('scroll', handleScroll);
+
+		// Remove scroll listener
+		if (typeof window !== 'undefined') {
+			window.removeEventListener('scroll', handleScroll);
+		}
 	});
 
 	async function loadInitialStories() {
