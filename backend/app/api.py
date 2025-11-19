@@ -158,7 +158,9 @@ def get_story_quotes(story_id: int, count: int = 5, db: Session = Depends(get_db
     if not story:
         raise HTTPException(status_code=404, detail=f"Story {story_id} not found")
 
-    # Limit count
+    # Validate count
+    if count < 1:
+        raise HTTPException(status_code=400, detail="Count must be at least 1")
     count = min(count, 10)
 
     extractor = QuoteExtractor()
