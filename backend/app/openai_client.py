@@ -1,4 +1,5 @@
 """OpenAI API client wrapper for story generation."""
+
 import logging
 from typing import Dict, Any, Optional
 from openai import OpenAI
@@ -35,7 +36,9 @@ class StoryGenerator:
                 - usage: Token usage stats
         """
         system_message = self._build_system_message()
-        user_message = self._build_user_message(narrative_context, recent_excerpts, new_events)
+        user_message = self._build_user_message(
+            narrative_context, recent_excerpts, new_events
+        )
 
         try:
             logger.info("Calling OpenAI API for story generation")
@@ -46,8 +49,8 @@ class StoryGenerator:
                     {"role": "system", "content": system_message},
                     {"role": "user", "content": user_message},
                 ],
-                temperature=0.8,
-                max_tokens=4000,
+                # temperature=0.8,
+                max_completion_tokens=4000,
             )
 
             story_text = response.choices[0].message.content.strip()
@@ -62,7 +65,9 @@ class StoryGenerator:
                 "total_tokens": response.usage.total_tokens,
             }
 
-            logger.info(f"Story generated successfully. Tokens used: {usage['total_tokens']}")
+            logger.info(
+                f"Story generated successfully. Tokens used: {usage['total_tokens']}"
+            )
 
             return {
                 "story": story_text,
