@@ -18,6 +18,7 @@ class AnalyticsService:
     def __init__(self, db: Session):
         self.db = db
         self.client = OpenAI(api_key=settings.openai_api_key)
+        self.model = settings.singl_model_name
 
     def analyze_story(self, story: StoryVersion) -> Optional[StoryAnalytics]:
         """
@@ -79,28 +80,33 @@ class AnalyticsService:
     def _analyze_sentiment(self, text: str) -> Dict[str, Any]:
         """Analyze sentiment of the story text."""
         try:
-            response = self.client.chat.completions.create(
-                model=settings.singl_model_name,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": """You are a sentiment analysis expert. Analyze the overall tone and sentiment of news text.
-                        Return your analysis as JSON with:
-                        - overall: "positive", "negative", or "neutral"
-                        - score: {positive: 0.0-1.0, negative: 0.0-1.0, neutral: 0.0-1.0} (must sum to 1.0)
-                        - reasoning: brief explanation
-                        """
-                    },
-                    {
-                        "role": "user",
-                        "content": f"Analyze sentiment of:\n\n{text[:3000]}"
-                    }
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.3,
-            )
+            system_prompt = """You are a sentiment analysis expert. Analyze the overall tone and sentiment of news text.
+Return your analysis as JSON with:
+- overall: "positive", "negative", or "neutral"
+- score: {positive: 0.0-1.0, negative: 0.0-1.0, neutral: 0.0-1.0} (must sum to 1.0)
+- reasoning: brief explanation"""
 
-            result = json.loads(response.choices[0].message.content)
+            user_prompt = f"Analyze sentiment of:\n\n{text[:3000]}"
+
+            if "gpt-5" in self.model:
+                response = self.client.responses.create(
+                    model=self.model,
+                    instructions=system_prompt,
+                    input=user_prompt,
+                    max_output_tokens=500,
+                    reasoning={"effort": "low"},
+                    text={"verbosity": "low"},
+                )
+            else:
+                response = self.client.responses.create(
+                    model=self.model,
+                    instructions=system_prompt,
+                    input=user_prompt,
+                    temperature=0.3,
+                    max_output_tokens=500,
+                )
+
+            result = json.loads(response.output_text.strip())
             return result
 
         except Exception as e:
@@ -114,36 +120,41 @@ class AnalyticsService:
     def _analyze_bias(self, text: str) -> Dict[str, Any]:
         """Analyze potential bias in the story."""
         try:
-            response = self.client.chat.completions.create(
-                model=settings.singl_model_name,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": """You are a media bias detection expert. Analyze news text for bias indicators.
-                        Return JSON with:
-                        - score: {
-                            political_lean: "left" | "center-left" | "center" | "center-right" | "right" | "unknown",
-                            lean_score: -1.0 to 1.0 (negative=left, positive=right),
-                            loaded_language_count: number of loaded/emotional words,
-                            emotional_language_score: 0.0-1.0
-                          }
-                        - indicators: {
-                            loaded_terms: [list of biased words/phrases found],
-                            omissions: [potential important omissions],
-                            framing: brief description of how story is framed
-                          }
-                        """
-                    },
-                    {
-                        "role": "user",
-                        "content": f"Analyze bias in:\n\n{text[:3000]}"
-                    }
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.3,
-            )
+            system_prompt = """You are a media bias detection expert. Analyze news text for bias indicators.
+Return JSON with:
+- score: {
+    political_lean: "left" | "center-left" | "center" | "center-right" | "right" | "unknown",
+    lean_score: -1.0 to 1.0 (negative=left, positive=right),
+    loaded_language_count: number of loaded/emotional words,
+    emotional_language_score: 0.0-1.0
+  }
+- indicators: {
+    loaded_terms: [list of biased words/phrases found],
+    omissions: [potential important omissions],
+    framing: brief description of how story is framed
+  }"""
 
-            result = json.loads(response.choices[0].message.content)
+            user_prompt = f"Analyze bias in:\n\n{text[:3000]}"
+
+            if "gpt-5" in self.model:
+                response = self.client.responses.create(
+                    model=self.model,
+                    instructions=system_prompt,
+                    input=user_prompt,
+                    max_output_tokens=800,
+                    reasoning={"effort": "low"},
+                    text={"verbosity": "medium"},
+                )
+            else:
+                response = self.client.responses.create(
+                    model=self.model,
+                    instructions=system_prompt,
+                    input=user_prompt,
+                    temperature=0.3,
+                    max_output_tokens=800,
+                )
+
+            result = json.loads(response.output_text.strip())
             return result
 
         except Exception as e:
@@ -204,34 +215,39 @@ class AnalyticsService:
     def _extract_fact_checks(self, text: str) -> List[Dict[str, Any]]:
         """Extract and verify factual claims."""
         try:
-            response = self.client.chat.completions.create(
-                model=settings.singl_model_name,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": """You are a fact-checking expert. Extract factual claims from news text and assess their veracity.
-                        Return JSON with:
-                        - fact_checks: array of {
-                            claim: "specific factual claim",
-                            verdict: "true" | "false" | "partially-true" | "unverified" | "misleading",
-                            confidence: 0.0-1.0,
-                            explanation: brief reasoning,
-                            sources: [relevant sources if available]
-                          }
+            system_prompt = """You are a fact-checking expert. Extract factual claims from news text and assess their veracity.
+Return JSON with:
+- fact_checks: array of {
+    claim: "specific factual claim",
+    verdict: "true" | "false" | "partially-true" | "unverified" | "misleading",
+    confidence: 0.0-1.0,
+    explanation: brief reasoning,
+    sources: [relevant sources if available]
+  }
 
-                        Focus on verifiable facts, not opinions. Mark as "unverified" if you cannot determine accuracy.
-                        """
-                    },
-                    {
-                        "role": "user",
-                        "content": f"Extract and verify claims from:\n\n{text[:3000]}"
-                    }
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.3,
-            )
+Focus on verifiable facts, not opinions. Mark as "unverified" if you cannot determine accuracy."""
 
-            result = json.loads(response.choices[0].message.content)
+            user_prompt = f"Extract and verify claims from:\n\n{text[:3000]}"
+
+            if "gpt-5" in self.model:
+                response = self.client.responses.create(
+                    model=self.model,
+                    instructions=system_prompt,
+                    input=user_prompt,
+                    max_output_tokens=1500,
+                    reasoning={"effort": "medium"},
+                    text={"verbosity": "medium"},
+                )
+            else:
+                response = self.client.responses.create(
+                    model=self.model,
+                    instructions=system_prompt,
+                    input=user_prompt,
+                    temperature=0.3,
+                    max_output_tokens=1500,
+                )
+
+            result = json.loads(response.output_text.strip())
             return result.get("fact_checks", [])
 
         except Exception as e:
@@ -241,34 +257,39 @@ class AnalyticsService:
     def _generate_predictions(self, text: str) -> List[Dict[str, Any]]:
         """Generate predictions about what might happen next."""
         try:
-            response = self.client.chat.completions.create(
-                model=settings.singl_model_name,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": """You are a geopolitical analyst and forecaster. Based on current events, predict likely future developments.
-                        Return JSON with:
-                        - predictions: array of {
-                            scenario: "description of what might happen",
-                            probability: 0.0-1.0 (estimated likelihood),
-                            timeframe: "short-term" | "medium-term" | "long-term",
-                            reasoning: explanation of why this might happen,
-                            related_events: [list of current events that support this prediction]
-                          }
+            system_prompt = """You are a geopolitical analyst and forecaster. Based on current events, predict likely future developments.
+Return JSON with:
+- predictions: array of {
+    scenario: "description of what might happen",
+    probability: 0.0-1.0 (estimated likelihood),
+    timeframe: "short-term" | "medium-term" | "long-term",
+    reasoning: explanation of why this might happen,
+    related_events: [list of current events that support this prediction]
+  }
 
-                        Provide 3-5 diverse predictions ranging from likely to possible.
-                        """
-                    },
-                    {
-                        "role": "user",
-                        "content": f"Based on these events, predict what might happen next:\n\n{text[:3000]}"
-                    }
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.7,
-            )
+Provide 3-5 diverse predictions ranging from likely to possible."""
 
-            result = json.loads(response.choices[0].message.content)
+            user_prompt = f"Based on these events, predict what might happen next:\n\n{text[:3000]}"
+
+            if "gpt-5" in self.model:
+                response = self.client.responses.create(
+                    model=self.model,
+                    instructions=system_prompt,
+                    input=user_prompt,
+                    max_output_tokens=1500,
+                    reasoning={"effort": "medium"},
+                    text={"verbosity": "medium"},
+                )
+            else:
+                response = self.client.responses.create(
+                    model=self.model,
+                    instructions=system_prompt,
+                    input=user_prompt,
+                    temperature=0.7,
+                    max_output_tokens=1500,
+                )
+
+            result = json.loads(response.output_text.strip())
             return result.get("predictions", [])
 
         except Exception as e:
@@ -278,34 +299,39 @@ class AnalyticsService:
     def _extract_events(self, text: str) -> List[Dict[str, Any]]:
         """Extract key events for timeline visualization."""
         try:
-            response = self.client.chat.completions.create(
-                model=settings.singl_model_name,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": """You are an event extraction expert. Identify discrete events from news text.
-                        Return JSON with:
-                        - events: array of {
-                            title: "brief event title",
-                            description: "1-2 sentence description",
-                            timestamp: "ISO date/time if mentioned, or null",
-                            category: "political" | "economic" | "social" | "conflict" | "disaster" | "technology" | "other",
-                            importance: 1-10 (how significant is this event)
-                          }
+            system_prompt = """You are an event extraction expert. Identify discrete events from news text.
+Return JSON with:
+- events: array of {
+    title: "brief event title",
+    description: "1-2 sentence description",
+    timestamp: "ISO date/time if mentioned, or null",
+    category: "political" | "economic" | "social" | "conflict" | "disaster" | "technology" | "other",
+    importance: 1-10 (how significant is this event)
+  }
 
-                        Extract 5-10 most important events.
-                        """
-                    },
-                    {
-                        "role": "user",
-                        "content": f"Extract key events from:\n\n{text[:3000]}"
-                    }
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.3,
-            )
+Extract 5-10 most important events."""
 
-            result = json.loads(response.choices[0].message.content)
+            user_prompt = f"Extract key events from:\n\n{text[:3000]}"
+
+            if "gpt-5" in self.model:
+                response = self.client.responses.create(
+                    model=self.model,
+                    instructions=system_prompt,
+                    input=user_prompt,
+                    max_output_tokens=1200,
+                    reasoning={"effort": "low"},
+                    text={"verbosity": "medium"},
+                )
+            else:
+                response = self.client.responses.create(
+                    model=self.model,
+                    instructions=system_prompt,
+                    input=user_prompt,
+                    temperature=0.3,
+                    max_output_tokens=1200,
+                )
+
+            result = json.loads(response.output_text.strip())
             return result.get("events", [])
 
         except Exception as e:
