@@ -1,13 +1,13 @@
 version: '3.8'
 
 # Production Docker Compose configuration
-# All configuration values should be set in .env.production file
+# All configuration values are loaded from .env.production via env_file
 # Differences from development:
 # - No volume mounts for code
 # - Optimized container settings
 # - Health checks enabled
 # - Proper restart policies
-# - All environment variables must be defined in .env.production
+# - Fixed ports (4001/8001) instead of environment variables
 
 services:
   db:
@@ -15,16 +15,12 @@ services:
     container_name: singl-db-prod
     env_file:
       - .env.production
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - postgres_data_prod:/var/lib/postgresql/data
     ports:
-      - "${POSTGRES_PORT}:5432"
+      - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      test: ["CMD-SHELL", "pg_isready -U singl"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -39,17 +35,8 @@ services:
     container_name: singl-backend-prod
     env_file:
       - .env.production
-    environment:
-      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
-      SINGL_MODEL_NAME: ${SINGL_MODEL_NAME}
-      SINGL_UPDATE_MINUTES: ${SINGL_UPDATE_MINUTES}
-      SINGL_CONTEXT_STEPS: ${SINGL_CONTEXT_STEPS}
-      SINGL_FEEDS: ${SINGL_FEEDS}
-      SINGL_LOG_LEVEL: ${SINGL_LOG_LEVEL}
-      SINGL_WS_ORIGIN: ${SINGL_WS_ORIGIN}
     ports:
-      - "${BACKEND_PORT}:8000"
+      - "8001:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -71,12 +58,9 @@ services:
     env_file:
       - .env.production
     environment:
-      VITE_API_URL: ${VITE_API_URL}
-      VITE_WS_URL: ${VITE_WS_URL}
-      ORIGIN: ${ORIGIN}
       NODE_ENV: production
     ports:
-      - "${FRONTEND_PORT}:3000"
+      - "4001:3000"
     depends_on:
       - backend
     networks:
