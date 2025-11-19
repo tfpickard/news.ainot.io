@@ -1,83 +1,94 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { api } from '$lib/api';
+	import { authFetch } from '$lib/auth';
+	import PasswordProtect from '$lib/components/PasswordProtect.svelte';
 
 	interface Stats {
-		total_stories: number;
-		total_images: number;
-		total_feed_items: number;
-		latest_story_at: string | null;
-		latest_image_at: string | null;
-		update_frequency_minutes: number;
-		feeds_count: number;
-		model_name: string;
-		uptime_hours: number;
-		stories_last_24h: number;
-		images_last_24h: number;
-	}
-
-	interface GeneratedImage {
-		id: number;
-		created_at: string;
-		story_version_id: number;
-		prompt: string;
-		image_url: string;
-		revised_prompt: string | null;
-		model: string;
-		size: string;
-		quality: string;
+		stories: {
+			total: number;
+			today: number;
+			this_week: number;
+			this_month: number;
+			per_hour: number;
+			latest_at: string | null;
+			avg_length: number;
+		};
+		feeds: {
+			total: number;
+			active: number;
+			inactive: number;
+			with_errors: number;
+			unique_sources: number;
+		};
+		feed_items: {
+			total: number;
+			today: number;
+			this_week: number;
+			avg_per_story: number;
+		};
+		ai_usage: {
+			total_tokens: number;
+			estimated_cost_usd: number;
+			avg_tokens_per_story: number;
+		};
+		top_feeds: Array<{
+			name: string;
+			item_count: number;
+		}>;
 	}
 
 	let stats: Stats | null = null;
-	let latestImage: GeneratedImage | null = null;
 	let loading = true;
 	let error: string | null = null;
+	let autoRefresh = false;
+	let refreshInterval: number;
 
 	onMount(async () => {
-		try {
-			// Fetch stats
-			const statsResponse = await fetch('/api/stats');
-			if (!statsResponse.ok) throw new Error('Failed to load stats');
-			stats = await statsResponse.json();
+		await loadStats();
 
-			// Fetch latest image
-			try {
-				const imageResponse = await fetch('/api/images/latest');
-				if (imageResponse.ok) {
-					latestImage = await imageResponse.json();
-				}
-			} catch (e) {
-				console.log('No images available yet');
+		return () => {
+			if (refreshInterval) {
+				clearInterval(refreshInterval);
 			}
+		};
+	});
 
+	async function loadStats() {
+		try {
+			loading = true;
+			const response = await authFetch('/api/stats');
+			if (!response.ok) throw new Error('Failed to load stats');
+			stats = await response.json();
 			loading = false;
+			error = null;
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to load stats';
 			loading = false;
 		}
-	});
+	}
+
+	function toggleAutoRefresh() {
+		autoRefresh = !autoRefresh;
+		if (autoRefresh) {
+			refreshInterval = setInterval(loadStats, 30000); // Refresh every 30 seconds
+		} else {
+			clearInterval(refreshInterval);
+		}
+	}
 
 	function formatDate(dateStr: string | null): string {
 		if (!dateStr) return 'N/A';
 		const date = new Date(dateStr);
 		return date.toLocaleString('en-US', {
-			year: 'numeric',
-			month: 'long',
+			month: 'short',
 			day: 'numeric',
 			hour: '2-digit',
-			minute: '2-digit',
-			timeZone: 'UTC',
-			timeZoneName: 'short'
+			minute: '2-digit'
 		});
 	}
 
-	function formatUptime(hours: number): string {
-		const days = Math.floor(hours / 24);
-		const remainingHours = Math.floor(hours % 24);
-		if (days > 0) {
-			return `${days}d ${remainingHours}h`;
-		}
-		return `${remainingHours}h`;
+	function formatNumber(num: number): string {
+		return num.toLocaleString();
 	}
 </script>
 
@@ -85,282 +96,425 @@
 	<title>Stats - Singl News</title>
 </svelte:head>
 
-<div class="page">
-	<div class="container">
-		<h1 class="page-title">Singl News Statistics</h1>
-
-		{#if loading}
-			<div class="loading">Loading statistics...</div>
-		{:else if error}
-			<div class="error">
-				<p>{error}</p>
-				<button on:click={() => window.location.reload()}>Retry</button>
-			</div>
-		{:else if stats}
-			<div class="stats-grid">
-				<!-- Generation Stats -->
-				<div class="stat-card">
-					<h2 class="stat-title">Story Generation</h2>
-					<div class="stat-item">
-						<span class="stat-label">Total Stories Generated</span>
-						<span class="stat-value">{stats.total_stories.toLocaleString()}</span>
-					</div>
-					<div class="stat-item">
-						<span class="stat-label">Stories (Last 24h)</span>
-						<span class="stat-value">{stats.stories_last_24h.toLocaleString()}</span>
-					</div>
-					<div class="stat-item">
-						<span class="stat-label">Latest Story</span>
-						<span class="stat-value small">{formatDate(stats.latest_story_at)}</span>
-					</div>
-					<div class="stat-item">
-						<span class="stat-label">Update Frequency</span>
-						<span class="stat-value">{stats.update_frequency_minutes} minutes</span>
+<PasswordProtect pageName="Statistics">
+	<div class="stats-page">
+		<div class="container">
+			<header class="stats-header">
+				<div class="header-top">
+					<h1>THE STORY Statistics</h1>
+					<div class="header-controls">
+						<button class="btn btn-secondary" on:click={loadStats} disabled={loading}>
+							{loading ? 'Refreshing...' : '↻ Refresh'}
+						</button>
+						<label class="toggle-label">
+							<input type="checkbox" bind:checked={autoRefresh} on:change={toggleAutoRefresh} />
+							Auto-refresh (30s)
+						</label>
 					</div>
 				</div>
+				<p class="stats-description">Real-time analytics and performance metrics</p>
+			</header>
 
-				<!-- Image Generation Stats -->
-				<div class="stat-card">
-					<h2 class="stat-title">Image Generation</h2>
-					<div class="stat-item">
-						<span class="stat-label">Total Images Generated</span>
-						<span class="stat-value">{stats.total_images.toLocaleString()}</span>
-					</div>
-					<div class="stat-item">
-						<span class="stat-label">Images (Last 24h)</span>
-						<span class="stat-value">{stats.images_last_24h.toLocaleString()}</span>
-					</div>
-					<div class="stat-item">
-						<span class="stat-label">Latest Image</span>
-						<span class="stat-value small">{formatDate(stats.latest_image_at)}</span>
-					</div>
-				</div>
-
-				<!-- Feed Stats -->
-				<div class="stat-card">
-					<h2 class="stat-title">News Sources</h2>
-					<div class="stat-item">
-						<span class="stat-label">Active Feeds</span>
-						<span class="stat-value">{stats.feeds_count.toLocaleString()}</span>
-					</div>
-					<div class="stat-item">
-						<span class="stat-label">Total Feed Items</span>
-						<span class="stat-value">{stats.total_feed_items.toLocaleString()}</span>
-					</div>
-				</div>
-
-				<!-- System Stats -->
-				<div class="stat-card">
-					<h2 class="stat-title">System</h2>
-					<div class="stat-item">
-						<span class="stat-label">AI Model</span>
-						<span class="stat-value small">{stats.model_name}</span>
-					</div>
-					<div class="stat-item">
-						<span class="stat-label">Uptime</span>
-						<span class="stat-value">{formatUptime(stats.uptime_hours)}</span>
-					</div>
-				</div>
-			</div>
-
-			<!-- Latest Generated Image -->
-			{#if latestImage}
-				<div class="latest-image-section">
-					<h2 class="section-title">Latest AI-Generated Image</h2>
-					<div class="image-card">
-						<img src={latestImage.image_url} alt="AI generated visualization" class="generated-image" />
-						<div class="image-details">
-							<p class="image-date">{formatDate(latestImage.created_at)}</p>
-							<p class="image-prompt">
-								<strong>Prompt:</strong> {latestImage.prompt}
-							</p>
-							{#if latestImage.revised_prompt}
-								<p class="image-prompt revised">
-									<strong>Revised Prompt:</strong> {latestImage.revised_prompt}
-								</p>
-							{/if}
-							<p class="image-meta">
-								Model: {latestImage.model} • Size: {latestImage.size} • Quality: {latestImage.quality}
-							</p>
+			{#if error}
+				<div class="error-banner">{error}</div>
+			{:else if loading && !stats}
+				<div class="loading">Loading statistics...</div>
+			{:else if stats}
+				<!-- Story Statistics -->
+				<section class="stats-section">
+					<h2 class="section-title">📖 Story Versions</h2>
+					<div class="stat-grid">
+						<div class="stat-card">
+							<div class="stat-value">{formatNumber(stats.stories.total)}</div>
+							<div class="stat-label">Total Versions</div>
+						</div>
+						<div class="stat-card">
+							<div class="stat-value">{formatNumber(stats.stories.today)}</div>
+							<div class="stat-label">Today</div>
+						</div>
+						<div class="stat-card">
+							<div class="stat-value">{formatNumber(stats.stories.this_week)}</div>
+							<div class="stat-label">This Week</div>
+						</div>
+						<div class="stat-card">
+							<div class="stat-value">{formatNumber(stats.stories.this_month)}</div>
+							<div class="stat-label">This Month</div>
+						</div>
+						<div class="stat-card">
+							<div class="stat-value">{stats.stories.per_hour.toFixed(2)}</div>
+							<div class="stat-label">Per Hour (Avg)</div>
+						</div>
+						<div class="stat-card">
+							<div class="stat-value">{formatNumber(stats.stories.avg_length)}</div>
+							<div class="stat-label">Avg Characters</div>
 						</div>
 					</div>
-				</div>
-			{/if}
+					{#if stats.stories.latest_at}
+						<div class="info-box">
+							<strong>Latest Story:</strong> {formatDate(stats.stories.latest_at)}
+						</div>
+					{/if}
+				</section>
 
-			<div class="navigation">
-				<a href="/" class="nav-link">← Back to Story</a>
-			</div>
-		{/if}
+				<!-- Feed Statistics -->
+				<section class="stats-section">
+					<h2 class="section-title">📡 RSS Feeds</h2>
+					<div class="stat-grid">
+						<div class="stat-card">
+							<div class="stat-value">{formatNumber(stats.feeds.total)}</div>
+							<div class="stat-label">Total Feeds</div>
+						</div>
+						<div class="stat-card stat-success">
+							<div class="stat-value">{formatNumber(stats.feeds.active)}</div>
+							<div class="stat-label">Active</div>
+						</div>
+						<div class="stat-card stat-warning">
+							<div class="stat-value">{formatNumber(stats.feeds.inactive)}</div>
+							<div class="stat-label">Inactive</div>
+						</div>
+						<div class="stat-card stat-danger">
+							<div class="stat-value">{formatNumber(stats.feeds.with_errors)}</div>
+							<div class="stat-label">With Errors</div>
+						</div>
+						<div class="stat-card">
+							<div class="stat-value">{formatNumber(stats.feeds.unique_sources)}</div>
+							<div class="stat-label">Unique Sources</div>
+						</div>
+					</div>
+				</section>
+
+				<!-- Feed Items Statistics -->
+				<section class="stats-section">
+					<h2 class="section-title">📰 News Items</h2>
+					<div class="stat-grid">
+						<div class="stat-card">
+							<div class="stat-value">{formatNumber(stats.feed_items.total)}</div>
+							<div class="stat-label">Total Items</div>
+						</div>
+						<div class="stat-card">
+							<div class="stat-value">{formatNumber(stats.feed_items.today)}</div>
+							<div class="stat-label">Fetched Today</div>
+						</div>
+						<div class="stat-card">
+							<div class="stat-value">{formatNumber(stats.feed_items.this_week)}</div>
+							<div class="stat-label">This Week</div>
+						</div>
+						<div class="stat-card">
+							<div class="stat-value">{stats.feed_items.avg_per_story.toFixed(1)}</div>
+							<div class="stat-label">Avg Per Story</div>
+						</div>
+					</div>
+				</section>
+
+				<!-- AI Usage Statistics -->
+				<section class="stats-section">
+					<h2 class="section-title">🤖 AI Usage</h2>
+					<div class="stat-grid">
+						<div class="stat-card">
+							<div class="stat-value">{formatNumber(stats.ai_usage.total_tokens)}</div>
+							<div class="stat-label">Total Tokens</div>
+						</div>
+						<div class="stat-card">
+							<div class="stat-value">${stats.ai_usage.estimated_cost_usd.toFixed(2)}</div>
+							<div class="stat-label">Estimated Cost</div>
+						</div>
+						<div class="stat-card">
+							<div class="stat-value">{formatNumber(stats.ai_usage.avg_tokens_per_story)}</div>
+							<div class="stat-label">Tokens Per Story</div>
+						</div>
+					</div>
+					<div class="info-box">
+						<strong>Note:</strong> Cost estimated at ~$0.01 per 1K tokens (GPT-4 pricing). Actual
+						costs may vary.
+					</div>
+				</section>
+
+				<!-- Top Feeds -->
+				{#if stats.top_feeds.length > 0}
+					<section class="stats-section">
+						<h2 class="section-title">🏆 Most Active Feeds</h2>
+						<div class="top-feeds-list">
+							{#each stats.top_feeds as feed, i}
+								<div class="top-feed-item">
+									<div class="feed-rank">#{i + 1}</div>
+									<div class="feed-name">{feed.name}</div>
+									<div class="feed-count">{formatNumber(feed.item_count)} items</div>
+								</div>
+							{/each}
+						</div>
+					</section>
+				{/if}
+
+				<!-- Quick Actions -->
+				<section class="stats-section">
+					<h2 class="section-title">⚡ Quick Actions</h2>
+					<div class="action-grid">
+						<a href="/control" class="action-card">
+							<span class="action-icon">🎛️</span>
+							<span class="action-label">Feed Control</span>
+						</a>
+						<a href="/history" class="action-card">
+							<span class="action-icon">📚</span>
+							<span class="action-label">Story Archive</span>
+						</a>
+						<a href="/api-docs" class="action-card">
+							<span class="action-icon">📡</span>
+							<span class="action-label">API Docs</span>
+						</a>
+						<a href="/" class="action-card">
+							<span class="action-icon">🏠</span>
+							<span class="action-label">Live Story</span>
+						</a>
+					</div>
+				</section>
+			{/if}
+		</div>
 	</div>
-</div>
+</PasswordProtect>
 
 <style>
-	.page {
-		min-height: 60vh;
-	}
-
-	.page-title {
-		font-size: 2rem;
-		font-family: var(--font-sans);
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		margin-bottom: var(--spacing-xl);
-		text-align: center;
-	}
-
-	.loading,
-	.error {
-		text-align: center;
-		padding: var(--spacing-xl);
-		color: var(--color-text-light);
-	}
-
-	.error button {
-		margin-top: var(--spacing-md);
-		padding: var(--spacing-sm) var(--spacing-md);
-		background: var(--color-accent);
-		color: white;
-		border: none;
-		border-radius: 4px;
-		cursor: pointer;
-		font-family: var(--font-sans);
-	}
-
-	.stats-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-		gap: var(--spacing-lg);
-		margin-bottom: var(--spacing-xl);
-	}
-
-	.stat-card {
+	.stats-page {
+		min-height: 100vh;
 		background: var(--color-highlight);
-		border: 1px solid var(--color-border);
-		border-radius: 8px;
-		padding: var(--spacing-lg);
+		padding: var(--spacing-xl) 0 var(--spacing-xl);
 	}
 
-	.stat-title {
-		font-size: 1.1rem;
-		font-family: var(--font-sans);
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		margin-bottom: var(--spacing-md);
-		color: var(--color-accent);
-		border-bottom: 2px solid var(--color-accent);
-		padding-bottom: var(--spacing-xs);
+	.stats-header {
+		margin-bottom: var(--spacing-xl);
 	}
 
-	.stat-item {
+	.header-top {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		padding: var(--spacing-sm) 0;
-		border-bottom: 1px solid var(--color-border);
+		margin-bottom: var(--spacing-sm);
+		flex-wrap: wrap;
+		gap: var(--spacing-md);
 	}
 
-	.stat-item:last-child {
-		border-bottom: none;
+	.stats-header h1 {
+		font-size: 2.5rem;
+		margin: 0;
 	}
 
-	.stat-label {
+	.header-controls {
+		display: flex;
+		gap: var(--spacing-md);
+		align-items: center;
+	}
+
+	.btn {
 		font-family: var(--font-sans);
-		font-size: 0.9rem;
-		color: var(--color-text-light);
-	}
-
-	.stat-value {
-		font-family: var(--font-sans);
-		font-size: 1.2rem;
+		font-size: 0.875rem;
 		font-weight: 600;
+		padding: var(--spacing-sm) var(--spacing-md);
+		border: 2px solid var(--color-text);
+		border-radius: 4px;
+		cursor: pointer;
+		transition: all 0.2s;
+	}
+
+	.btn-secondary {
+		background: white;
 		color: var(--color-text);
 	}
 
-	.stat-value.small {
-		font-size: 0.85rem;
-		font-weight: 400;
+	.btn-secondary:hover:not(:disabled) {
+		background: var(--color-border);
 	}
 
-	.latest-image-section {
-		margin-top: var(--spacing-xl);
-		padding-top: var(--spacing-xl);
-		border-top: 2px solid var(--color-border);
+	.btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.toggle-label {
+		font-family: var(--font-sans);
+		font-size: 0.875rem;
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-xs);
+		cursor: pointer;
+	}
+
+	.stats-description {
+		font-family: var(--font-sans);
+		color: var(--color-text-light);
+		margin: 0;
+	}
+
+	.stats-section {
+		background: white;
+		border: 2px solid var(--color-border);
+		border-radius: 8px;
+		padding: var(--spacing-lg);
+		margin-bottom: var(--spacing-lg);
 	}
 
 	.section-title {
 		font-size: 1.5rem;
-		font-family: var(--font-sans);
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		margin-bottom: var(--spacing-lg);
+		margin: 0 0 var(--spacing-lg) 0;
+		padding-bottom: var(--spacing-sm);
+		border-bottom: 2px solid var(--color-border);
+	}
+
+	.stat-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+		gap: var(--spacing-md);
+	}
+
+	.stat-card {
+		background: var(--color-highlight);
+		border: 2px solid var(--color-border);
+		border-radius: 8px;
+		padding: var(--spacing-md);
 		text-align: center;
 	}
 
-	.image-card {
-		background: var(--color-highlight);
-		border: 1px solid var(--color-border);
-		border-radius: 8px;
-		overflow: hidden;
+	.stat-card.stat-success {
+		background: #d4edda;
+		border-color: #28a745;
 	}
 
-	.generated-image {
-		width: 100%;
-		height: auto;
-		display: block;
+	.stat-card.stat-warning {
+		background: #fff3cd;
+		border-color: #ffc107;
 	}
 
-	.image-details {
-		padding: var(--spacing-lg);
+	.stat-card.stat-danger {
+		background: #f8d7da;
+		border-color: #dc3545;
 	}
 
-	.image-date {
+	.stat-value {
+		font-size: 2rem;
+		font-weight: 700;
+		color: var(--color-text);
+		margin-bottom: var(--spacing-xs);
+	}
+
+	.stat-label {
 		font-family: var(--font-sans);
 		font-size: 0.875rem;
 		color: var(--color-text-light);
-		margin-bottom: var(--spacing-sm);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
 	}
 
-	.image-prompt {
+	.info-box {
 		font-family: var(--font-sans);
-		font-size: 0.95rem;
-		margin-bottom: var(--spacing-sm);
-		line-height: 1.5;
-	}
-
-	.image-prompt.revised {
-		color: var(--color-text-light);
-		font-style: italic;
-	}
-
-	.image-meta {
-		font-family: var(--font-sans);
-		font-size: 0.8rem;
-		color: var(--color-text-light);
-		margin-top: var(--spacing-md);
-		padding-top: var(--spacing-sm);
-		border-top: 1px solid var(--color-border);
-	}
-
-	.navigation {
-		margin-top: var(--spacing-xl);
-		text-align: center;
-	}
-
-	.nav-link {
-		font-family: var(--font-sans);
-		font-size: 0.95rem;
-		font-weight: 600;
-		color: var(--color-accent);
-		text-decoration: none;
-		padding: var(--spacing-sm) var(--spacing-md);
-		border: 1px solid var(--color-accent);
+		font-size: 0.875rem;
+		background: var(--color-highlight);
+		padding: var(--spacing-sm);
+		border-left: 3px solid var(--color-text);
 		border-radius: 4px;
-		display: inline-block;
+		margin-top: var(--spacing-md);
+	}
+
+	.top-feeds-list {
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-sm);
+	}
+
+	.top-feed-item {
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-md);
+		padding: var(--spacing-sm);
+		background: var(--color-highlight);
+		border-radius: 4px;
+	}
+
+	.feed-rank {
+		font-family: var(--font-sans);
+		font-size: 1.125rem;
+		font-weight: 700;
+		color: var(--color-text-light);
+		min-width: 40px;
+	}
+
+	.feed-name {
+		flex: 1;
+		font-family: var(--font-sans);
+		font-weight: 600;
+	}
+
+	.feed-count {
+		font-family: var(--font-sans);
+		font-size: 0.875rem;
+		color: var(--color-text-light);
+	}
+
+	.action-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+		gap: var(--spacing-md);
+	}
+
+	.action-card {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: var(--spacing-sm);
+		padding: var(--spacing-lg);
+		background: var(--color-highlight);
+		border: 2px solid var(--color-border);
+		border-radius: 8px;
+		text-decoration: none;
+		color: var(--color-text);
 		transition: all 0.2s;
 	}
 
-	.nav-link:hover {
-		background: var(--color-accent);
-		color: white;
+	.action-card:hover {
+		border-color: var(--color-text);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+		transform: translateY(-2px);
+	}
+
+	.action-icon {
+		font-size: 2rem;
+	}
+
+	.action-label {
+		font-family: var(--font-sans);
+		font-size: 0.875rem;
+		font-weight: 600;
+		text-align: center;
+	}
+
+	.loading,
+	.error-banner {
+		text-align: center;
+		padding: var(--spacing-xl);
+		font-family: var(--font-sans);
+	}
+
+	.error-banner {
+		background: #f8d7da;
+		color: #dc3545;
+		border: 2px solid #dc3545;
+		border-radius: 8px;
+		margin-bottom: var(--spacing-lg);
+	}
+
+	@media (max-width: 768px) {
+		.header-top {
+			flex-direction: column;
+			align-items: flex-start;
+		}
+
+		.stats-header h1 {
+			font-size: 2rem;
+		}
+
+		.stat-grid {
+			grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+		}
+
+		.stat-value {
+			font-size: 1.5rem;
+		}
 	}
 </style>

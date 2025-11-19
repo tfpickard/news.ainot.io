@@ -103,13 +103,13 @@ python -m app.main
 cd frontend
 
 # Install dependencies
-npm install
+pnpm install
 
 # Create .env file
 cp .env.example .env
 
 # Start development server
-npm run dev
+pnpm run dev
 ```
 
 ## 📋 Environment Variables
@@ -184,7 +184,7 @@ pytest
 
 ```bash
 cd frontend
-npm run test
+pnpm run test
 ```
 
 ## 🎨 Design Philosophy

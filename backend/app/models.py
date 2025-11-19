@@ -1,5 +1,5 @@
 """SQLAlchemy database models."""
-from sqlalchemy import Column, Integer, String, Text, DateTime, JSON, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Text, DateTime, JSON, Boolean, UniqueConstraint
 from sqlalchemy.sql import func
 from datetime import datetime
 from .database import Base
@@ -46,6 +46,23 @@ class FeedItem(Base):
         return f"<FeedItem(id={self.id}, title='{self.title[:50]}...')>"
 
 
+class FeedConfiguration(Base):
+    """Configurable RSS feed sources."""
+
+    __tablename__ = "feed_configurations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)  # Human-readable name
+    url = Column(String, nullable=False, unique=True, index=True)
+    category = Column(String)  # e.g., "tech", "politics", "sports"
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    last_fetched = Column(DateTime(timezone=True))
+    fetch_error = Column(Text)  # Store last error if any
+    priority = Column(Integer, default=0)  # Higher priority feeds checked first
+
+    def __repr__(self):
+        return f"<FeedConfiguration(id={self.id}, name='{self.name}', active={self.is_active})>"
 class GeneratedImage(Base):
     """Represents an AI-generated image inspired by the news story."""
 

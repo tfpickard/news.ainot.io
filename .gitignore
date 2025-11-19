@@ -60,8 +60,5 @@ htmlcov/
 .pytest_cache/
 coverage/
 
-# Docker
-.dockerignore
-
 # Alembic
 alembic/versions/*.pyc

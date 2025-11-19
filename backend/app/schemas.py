@@ -89,6 +89,84 @@ class WebSocketMessage(BaseModel):
     story: StoryVersionResponse
 
 
+class QuoteResponse(BaseModel):
+    """Schema for extracted quotes."""
+    text: str
+    category: str
+    absurdity_score: int
+    keywords: List[str]
+
+
+class QuotesResponse(BaseModel):
+    """Schema for multiple quotes from a story."""
+    story_id: int
+    quotes: List[QuoteResponse]
+
+
+class SourceDetail(BaseModel):
+    """Schema for detailed source information."""
+    id: int
+    title: str
+    source: str
+    published_at: Optional[str] = None
+    link: Optional[str] = None
+
+
+class SourcesResponse(BaseModel):
+    """Schema for story sources."""
+    story_id: int
+    item_count: int
+    sources: List[SourceDetail]
+
+
+class SEOMetadata(BaseModel):
+    """Schema for SEO metadata."""
+    title: str
+    description: str
+    keywords: List[str]
+    og_title: str
+    og_description: str
+    og_type: str = "article"
+    twitter_card: str = "summary_large_image"
+
+
+class APIDocumentation(BaseModel):
+    """Schema for API documentation."""
+    version: str
+    endpoints: List[Dict[str, Any]]
+    examples: List[Dict[str, Any]]
+    rate_limits: Dict[str, Any]
+
+
+class FeedConfigurationBase(BaseModel):
+    """Base schema for feed configuration."""
+    name: str
+    url: str
+    category: Optional[str] = None
+    is_active: bool = True
+    priority: int = 0
+
+
+class FeedConfigurationCreate(FeedConfigurationBase):
+    """Schema for creating a feed configuration."""
+    pass
+
+
+class FeedConfigurationUpdate(BaseModel):
+    """Schema for updating a feed configuration."""
+    name: Optional[str] = None
+    url: Optional[str] = None
+    category: Optional[str] = None
+    is_active: Optional[bool] = None
+    priority: Optional[int] = None
+
+
+class FeedConfigurationResponse(FeedConfigurationBase):
+    """Schema for feed configuration responses."""
+    id: int
+    created_at: datetime
+    last_fetched: Optional[datetime] = None
+    fetch_error: Optional[str] = None
 class GeneratedImageResponse(BaseModel):
     """Schema for generated image responses."""
     id: int
@@ -105,6 +183,15 @@ class GeneratedImageResponse(BaseModel):
         from_attributes = True
 
 
+class LoginRequest(BaseModel):
+    """Schema for login request."""
+    password: str
+
+
+class LoginResponse(BaseModel):
+    """Schema for login response."""
+    api_key: str
+    message: str
 class StatsResponse(BaseModel):
     """Schema for public stats page."""
     total_stories: int

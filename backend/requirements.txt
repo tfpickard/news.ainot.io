@@ -12,6 +12,7 @@ apscheduler
 python-multipart
 websockets
 httpx
+Pillow
 
 # Testing
 pytest

@@ -1,18 +1,21 @@
 FROM node:20-slim
 
+# Enable corepack for pnpm
+RUN corepack enable
+
 WORKDIR /app
 
 # Copy package files
-COPY package*.json ./
+COPY package*.json pnpm-lock.yaml* ./
 
-# Install dependencies
-RUN npm ci
+# Install dependencies using pnpm
+RUN pnpm install --frozen-lockfile
 
 # Copy application code
 COPY . .
 
 # Build the application
-RUN npm run build
+RUN pnpm run build
 
 # Use existing node user (UID 1000)
 RUN chown -R node:node /app
