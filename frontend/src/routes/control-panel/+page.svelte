@@ -359,13 +359,16 @@
 
 					<!-- System Info -->
 					<div class="config-section">
-						<h2 class="section-title">System Information</h2>
+						<h2 class="section-title">System Information &amp; Management</h2>
 						<div class="info-grid">
 							<div class="info-item">
 								<span class="info-label">Active Feeds:</span>
 								<span class="info-value">{config.feed_count}</span>
 							</div>
 						</div>
+					<div class="management-links">
+						<a href="/control" class="btn btn-secondary">Manage RSS Feeds</a>
+					</div>
 					</div>
 
 					<div class="form-actions">
@@ -613,6 +616,13 @@
 	.info-value {
 		font-family: var(--font-sans);
 		font-weight: 600;
+	}
+
+	.management-links {
+		margin-top: var(--spacing-md);
+		display: flex;
+		gap: var(--spacing-sm);
+		flex-wrap: wrap;
 	}
 
 	@media (max-width: 640px) {
