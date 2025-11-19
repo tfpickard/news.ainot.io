@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
-f=docker-compose.prod.yml
-docker compose $f down; docker compose -$f up --build -d; docker compose $f logs -f
+f="-f docker-compose.prod.yml"
+docker compose $f down; docker compose $f up --build -d; docker compose $f logs -f
