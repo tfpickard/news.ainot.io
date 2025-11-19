@@ -1,7 +1,7 @@
-# Show HN: Singl News – AI that conflates all world events into one impossible story
+# Show HN: UnioNews – AI that conflates all world events into one impossible story
 
 ## Elevator Pitch
-Singl News is an experimental art/tech project that uses AI to synthesize all current news into a single, continuous narrative. The catch? It deliberately conflates everything—sports, tech, politics, climate—into one unified story that treats contradictory events as if they're all facets of the same thing.
+UnioNews is an experimental art/tech project that uses AI to synthesize all current news into a single, continuous narrative. The catch? It deliberately conflates everything—sports, tech, politics, climate—into one unified story that treats contradictory events as if they're all facets of the same thing.
 
 ## What Makes It Interesting
 
@@ -81,7 +81,7 @@ Would love to hear what HN thinks!
 
 Hey Reddit!
 
-I built **Singl News** (https://singl.news) - an experimental news site that uses AI to synthesize all world events into a single, continuous narrative that never resets.
+I built **UnioNews** (https://singl.news) - an experimental news site that uses AI to synthesize all world events into a single, continuous narrative that never resets.
 
 **The twist?** The AI is instructed to treat ALL events as facets of the same story, even when they're completely contradictory.
 
@@ -149,7 +149,7 @@ It's part art project, part AI experiment, part commentary on news fragmentation
 ## Twitter/X Strategy
 
 ### Tweet Thread
-🧵 I built an AI news site that treats all world events as one continuous story.
+🧵 I built UnioNews - an AI news site that treats all world events as one continuous story.
 
 The Pope's crypto initiative? Same story as the submarine Olympics.
 
@@ -250,7 +250,7 @@ https://singl.news
 
 **Create visual quote cards with:**
 - Absurd quotes overlaid on newspaper-style backgrounds
-- "From THE STORY at Singl News" attribution
+- "From THE STORY at UnioNews" attribution
 - QR code linking to full story
 - Use retro newspaper aesthetic
 

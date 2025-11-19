@@ -208,7 +208,7 @@ class QuoteImageGenerator:
         )
 
         # Add branding at top
-        brand_text = "THE STORY - Singl News"
+        brand_text = "THE STORY - UnioNews"
         bbox = brand_font.getbbox(brand_text)
         brand_width = bbox[2] - bbox[0]
         brand_x = (self.width - brand_width) // 2

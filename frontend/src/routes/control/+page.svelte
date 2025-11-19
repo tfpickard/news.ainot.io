@@ -158,7 +158,7 @@
 </script>
 
 <svelte:head>
-	<title>Feed Control - Singl News</title>
+	<title>Feed Control - UnioNews</title>
 </svelte:head>
 
 <PasswordProtect pageName="Feed Control">

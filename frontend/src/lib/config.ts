@@ -1,2 +1,2 @@
 // Site configuration
-export const SITE_NAME = 'SINGL NEWS';
+export const SITE_NAME = 'UNIONEWS';

@@ -128,7 +128,7 @@ Prioritize quotes that would make someone do a double-take on social media.
         if platform == "twitter":
             # Twitter format
             prefix = "From THE STORY:"
-            hashtag = "#SinglNews"
+            hashtag = "#UnioNews"
             max_length = 280 - len(hashtag) - 1  # Reserve space for hashtag
 
             if len(prefix) + len(text) + 3 <= max_length:
@@ -143,4 +143,4 @@ Prioritize quotes that would make someone do a double-take on social media.
             return f'"{text}"\n\nFrom THE STORY - the world\'s only unified continuous news narrative\n\nhttps://singl.news'
 
         else:  # facebook, linkedin, generic
-            return f'"{text}"\n\n— THE STORY at Singl News\nhttps://singl.news'
+            return f'"{text}"\n\n— THE STORY at UnioNews\nhttps://singl.news'

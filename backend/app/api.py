@@ -348,7 +348,7 @@ def get_story_seo(story_id: int, db: Session = Depends(get_db)):
     keywords = list(set(words))[:10]  # Unique capitalized words as keywords
 
     # Add some standard keywords
-    keywords.extend(["Singl News", "unified news", "continuous narrative", "news synthesis"])
+    keywords.extend(["UnioNews", "unified news", "continuous narrative", "news synthesis"])
 
     # Create description from first part of story
     description = story.full_text[:200]
@@ -356,7 +356,7 @@ def get_story_seo(story_id: int, db: Session = Depends(get_db)):
         description += "..."
 
     return SEOMetadata(
-        title=f"{story.summary} - Singl News",
+        title=f"{story.summary} - UnioNews",
         description=description,
         keywords=keywords,
         og_title=story.summary,
@@ -449,7 +449,7 @@ def get_api_docs():
         rate_limits={
             "default": "100 requests per minute",
             "burst": "200 requests per minute",
-            "attribution": "Please include 'Powered by Singl News' when using this API"
+            "attribution": "Please include 'Powered by UnioNews' when using this API"
         }
     )
 

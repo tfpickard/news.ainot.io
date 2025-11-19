@@ -91,7 +91,7 @@
 </script>
 
 <svelte:head>
-	<title>Stats - Singl News</title>
+	<title>Stats - UnioNews</title>
 </svelte:head>
 
 <div class="stats-page">

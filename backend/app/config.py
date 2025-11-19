@@ -1,4 +1,4 @@
-"""Configuration management for Singl News backend."""
+"""Configuration management for UnioNews backend."""
 import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List
@@ -88,7 +88,7 @@ class Settings(BaseSettings):
     singl_text_verbosity: str = "medium"  # low, medium, high
 
     # App
-    app_name: str = "Singl News Backend"
+    app_name: str = "UnioNews Backend"
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -107,7 +107,7 @@ settings = Settings()
 
 # Debug logging for configuration (only shows on startup)
 print("=" * 80)
-print("🔧 SINGL NEWS CONFIGURATION LOADED")
+print("🔧 UNIONEWS CONFIGURATION LOADED")
 print("=" * 80)
 print(f"📊 Database: {settings.database_url.split('@')[1] if '@' in settings.database_url else 'configured'}")
 print(f"🤖 OpenAI Key: {'✓ SET (' + settings.openai_api_key[-4:] + ')' if settings.openai_api_key else '✗ NOT SET'}")
