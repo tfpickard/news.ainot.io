@@ -14,9 +14,9 @@ COPY . .
 # Build the application
 RUN npm run build
 
-# Create non-root user
-RUN useradd -m -u 1000 singl && chown -R singl:singl /app
-USER singl
+# Use existing node user (UID 1000)
+RUN chown -R node:node /app
+USER node
 
 # Expose port
 EXPOSE 3000
