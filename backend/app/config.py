@@ -35,7 +35,7 @@ class Settings(BaseSettings):
         "https://www.theverge.com/rss/index.xml,"
         # Business & Finance
         "https://feeds.a.dj.com/rss/RSSWorldNews.xml,"
-        "https://www.ft.com/?format=rss,"
+        "https://www.ft.com/rss/home,"
         "https://www.economist.com/the-world-this-week/rss.xml,"
         # Entertainment & Culture
         "https://variety.com/feed/,"
