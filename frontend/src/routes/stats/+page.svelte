@@ -54,7 +54,7 @@
 	async function loadStats() {
 		try {
 			loading = true;
-			const response = await fetch('/api/stats');
+			const response = await fetch('/api/admin/stats');
 			if (!response.ok) throw new Error('Failed to load stats');
 			stats = await response.json();
 			loading = false;

@@ -631,8 +631,8 @@ def import_default_feeds(db: Session = Depends(get_db), auth: str = Depends(requ
 
 
 @router.get("/admin/stats")
-def get_admin_stats(db: Session = Depends(get_db), auth: str = Depends(require_auth)):
-    """Get comprehensive statistics about THE STORY."""
+def get_admin_stats(db: Session = Depends(get_db)):
+    """Get comprehensive statistics about THE STORY (public endpoint)."""
     from sqlalchemy import func, distinct
     from datetime import datetime, timedelta, timezone
 
