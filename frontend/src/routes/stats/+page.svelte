@@ -1,7 +1,5 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { authFetch } from '$lib/auth';
-	import PasswordProtect from '$lib/components/PasswordProtect.svelte';
 
 	interface Stats {
 		stories: {
@@ -56,7 +54,7 @@
 	async function loadStats() {
 		try {
 			loading = true;
-			const response = await authFetch('/api/stats');
+			const response = await fetch('/api/stats');
 			if (!response.ok) throw new Error('Failed to load stats');
 			stats = await response.json();
 			loading = false;
@@ -96,8 +94,7 @@
 	<title>Stats - Singl News</title>
 </svelte:head>
 
-<PasswordProtect pageName="Statistics">
-	<div class="stats-page">
+<div class="stats-page">
 		<div class="container">
 			<header class="stats-header">
 				<div class="header-top">
@@ -269,8 +266,7 @@
 				</section>
 			{/if}
 		</div>
-	</div>
-</PasswordProtect>
+</div>
 
 <style>
 	.stats-page {

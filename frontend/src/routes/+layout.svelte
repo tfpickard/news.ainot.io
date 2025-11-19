@@ -3,6 +3,7 @@
 	import { SITE_NAME } from '$lib/config';
 	import { page } from '$app/stores';
 	import NewsroomAmbience from '$lib/components/NewsroomAmbience.svelte';
+	import ThemeSwitcher from '$lib/components/ThemeSwitcher.svelte';
 </script>
 
 <svelte:head>
@@ -13,13 +14,15 @@
 <div class="site">
 	<header class="masthead">
 		<div class="container">
+			<div class="header-top">
+				<ThemeSwitcher />
+			</div>
 			<nav class="nav">
 				<a href="/" class="nav-link" class:active={$page.url.pathname === '/'}>Live</a>
 				<a href="/history" class="nav-link" class:active={$page.url.pathname === '/history'}>Archive</a>
 				<a href="/stats" class="nav-link" class:active={$page.url.pathname === '/stats'}>Stats</a>
 				<a href="/about" class="nav-link" class:active={$page.url.pathname === '/about'}>About</a>
 				<a href="/api-docs" class="nav-link" class:active={$page.url.pathname === '/api-docs'}>API</a>
-				<a href="/stats" class="nav-link" class:active={$page.url.pathname === '/stats'}>Stats</a>
 				<a href="/control" class="nav-link" class:active={$page.url.pathname === '/control'}>Control</a>
 			</nav>
 			<h1 class="site-title">
@@ -59,6 +62,12 @@
 		border-bottom: 3px solid var(--color-text);
 		padding: var(--spacing-lg) 0;
 		margin-bottom: var(--spacing-xl);
+	}
+
+	.header-top {
+		display: flex;
+		justify-content: flex-end;
+		margin-bottom: var(--spacing-md);
 	}
 
 	.nav {

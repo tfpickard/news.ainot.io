@@ -14,7 +14,7 @@ from .database import get_db
 from .story_service import StoryService
 from .quote_service import QuoteExtractor
 from .image_service import QuoteImageGenerator
-from .models import FeedItem, FeedConfiguration, StoryVersion, GeneratedImage
+from .models import FeedItem, FeedConfiguration, StoryVersion, GeneratedImage, UserSettings
 from .schemas import (
     StoryVersionResponse,
     StoryVersionSummary,
@@ -37,6 +37,8 @@ from .schemas import (
     ControlPanelAuthResponse,
     ConfigUpdateRequest,
     ConfigResponse,
+    UserSettingsUpdate,
+    UserSettingsResponse,
 )
 from .config import settings
 from .auth import require_auth, get_admin_api_key
@@ -854,19 +856,27 @@ def authenticate_control_panel(auth_request: ControlPanelAuthRequest):
 
 
 @router.get("/control-panel/config", response_model=ConfigResponse)
-def get_config(authenticated: bool = Depends(verify_auth_token)):
+def get_config(
+    authenticated: bool = Depends(verify_auth_token),
+    db: Session = Depends(get_db)
+):
     """Get current configuration (requires authentication)."""
+    # Load from database if available, otherwise use env defaults
+    def get_setting(key: str, default):
+        setting = db.query(UserSettings).filter(UserSettings.key == f"config_{key}").first()
+        return setting.value if setting else default
+
     return ConfigResponse(
-        singl_model_name=settings.singl_model_name,
-        singl_update_minutes=settings.singl_update_minutes,
-        singl_context_steps=settings.singl_context_steps,
-        singl_temperature=settings.singl_temperature,
-        singl_max_tokens=settings.singl_max_tokens,
-        singl_image_generation_enabled=settings.singl_image_generation_enabled,
-        singl_image_generation_interval=settings.singl_image_generation_interval,
-        singl_image_model=settings.singl_image_model,
-        singl_image_size=settings.singl_image_size,
-        singl_image_quality=settings.singl_image_quality,
+        singl_model_name=get_setting("model_name", settings.singl_model_name),
+        singl_update_minutes=get_setting("update_minutes", settings.singl_update_minutes),
+        singl_context_steps=get_setting("context_steps", settings.singl_context_steps),
+        singl_temperature=get_setting("temperature", settings.singl_temperature),
+        singl_max_tokens=get_setting("max_tokens", settings.singl_max_tokens),
+        singl_image_generation_enabled=get_setting("image_generation_enabled", settings.singl_image_generation_enabled),
+        singl_image_generation_interval=get_setting("image_generation_interval", settings.singl_image_generation_interval),
+        singl_image_model=get_setting("image_model", settings.singl_image_model),
+        singl_image_size=get_setting("image_size", settings.singl_image_size),
+        singl_image_quality=get_setting("image_quality", settings.singl_image_quality),
         feed_count=len(settings.get_feed_list()),
     )
 
@@ -875,46 +885,68 @@ def get_config(authenticated: bool = Depends(verify_auth_token)):
 def update_config(
     config_update: ConfigUpdateRequest,
     authenticated: bool = Depends(verify_auth_token),
+    db: Session = Depends(get_db)
 ):
-    """Update configuration (requires authentication)."""
-    # Update settings dynamically
-    # Note: These changes are in-memory only and will reset on restart
-    # For persistent changes, you would need to update the .env file
+    """Update configuration (requires authentication). Settings are persisted to database."""
 
+    def save_setting(key: str, value):
+        """Save or update a setting in the database and update in-memory settings."""
+        setting = db.query(UserSettings).filter(UserSettings.key == f"config_{key}").first()
+        if setting:
+            setting.value = value
+        else:
+            setting = UserSettings(key=f"config_{key}", value=value)
+            db.add(setting)
+
+    # Update settings and persist to database
     if config_update.singl_model_name is not None:
+        save_setting("model_name", config_update.singl_model_name)
         settings.singl_model_name = config_update.singl_model_name
 
     if config_update.singl_update_minutes is not None:
+        save_setting("update_minutes", config_update.singl_update_minutes)
         settings.singl_update_minutes = config_update.singl_update_minutes
 
     if config_update.singl_context_steps is not None:
+        save_setting("context_steps", config_update.singl_context_steps)
         settings.singl_context_steps = config_update.singl_context_steps
 
     if config_update.singl_temperature is not None:
+        save_setting("temperature", config_update.singl_temperature)
         settings.singl_temperature = config_update.singl_temperature
 
     if config_update.singl_max_tokens is not None:
+        save_setting("max_tokens", config_update.singl_max_tokens)
         settings.singl_max_tokens = config_update.singl_max_tokens
 
     if config_update.singl_image_generation_enabled is not None:
+        save_setting("image_generation_enabled", config_update.singl_image_generation_enabled)
         settings.singl_image_generation_enabled = config_update.singl_image_generation_enabled
 
     if config_update.singl_image_generation_interval is not None:
+        save_setting("image_generation_interval", config_update.singl_image_generation_interval)
         settings.singl_image_generation_interval = config_update.singl_image_generation_interval
 
     if config_update.singl_image_model is not None:
+        save_setting("image_model", config_update.singl_image_model)
         settings.singl_image_model = config_update.singl_image_model
 
     if config_update.singl_image_size is not None:
+        save_setting("image_size", config_update.singl_image_size)
         settings.singl_image_size = config_update.singl_image_size
 
     if config_update.singl_image_quality is not None:
+        save_setting("image_quality", config_update.singl_image_quality)
         settings.singl_image_quality = config_update.singl_image_quality
 
     if config_update.singl_feeds is not None:
+        save_setting("feeds", config_update.singl_feeds)
         settings.singl_feeds = config_update.singl_feeds
 
-    logger.info("Configuration updated via control panel")
+    # Commit all changes to database
+    db.commit()
+
+    logger.info("Configuration updated and persisted to database via control panel")
 
     return ConfigResponse(
         singl_model_name=settings.singl_model_name,
@@ -929,3 +961,43 @@ def update_config(
         singl_image_quality=settings.singl_image_quality,
         feed_count=len(settings.get_feed_list()),
     )
+
+
+@router.get("/settings", response_model=UserSettingsResponse)
+async def get_user_settings(db: Session = Depends(get_db)):
+    """Get user settings (theme preferences, etc.)."""
+    theme_setting = db.query(UserSettings).filter(UserSettings.key == "theme").first()
+
+    # Default to "auto" if not set
+    theme = theme_setting.value if theme_setting else "auto"
+
+    return UserSettingsResponse(theme=theme)
+
+
+@router.post("/settings", response_model=UserSettingsResponse)
+async def update_user_settings(
+    settings_update: UserSettingsUpdate,
+    db: Session = Depends(get_db)
+):
+    """Update user settings."""
+    if settings_update.theme is not None:
+        # Validate theme value
+        if settings_update.theme not in ["light", "dark", "auto"]:
+            raise HTTPException(status_code=400, detail="Invalid theme value. Must be 'light', 'dark', or 'auto'.")
+
+        # Update or create theme setting
+        theme_setting = db.query(UserSettings).filter(UserSettings.key == "theme").first()
+        if theme_setting:
+            theme_setting.value = settings_update.theme
+        else:
+            theme_setting = UserSettings(key="theme", value=settings_update.theme)
+            db.add(theme_setting)
+
+        db.commit()
+        db.refresh(theme_setting)
+
+    # Return current settings
+    theme_setting = db.query(UserSettings).filter(UserSettings.key == "theme").first()
+    theme = theme_setting.value if theme_setting else "auto"
+
+    return UserSettingsResponse(theme=theme)
