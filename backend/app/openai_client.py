@@ -249,6 +249,11 @@ class ImageGenerator:
             # Create a prompt that captures the essence of the story
             prompt = self._build_image_prompt(story_text, story_summary)
 
+            # Final safety check to ensure prompt is never empty
+            if not prompt or not prompt.strip():
+                logger.error("Empty prompt generated, using emergency fallback")
+                prompt = "A surreal, artistic representation of breaking news, vivid colors, dreamlike quality"
+
             logger.info(f"Generating image with DALL-E. Prompt: {prompt[:100]}...")
 
             response = self.client.images.generate(
@@ -280,6 +285,14 @@ class ImageGenerator:
 
         We'll use GPT to create an artistic prompt based on the story.
         """
+        # Validate inputs
+        if not story_text and not story_summary:
+            logger.warning("Both story_text and story_summary are empty, using default prompt")
+            return "A surreal, artistic representation of breaking news emerging from abstract chaos, vivid colors, dreamlike quality"
+
+        # Use story_text if summary is empty
+        summary_to_use = story_summary if story_summary else story_text[:500]
+
         try:
             # Use GPT to create a visual prompt
             system_message = """You are an art director creating visual prompts for surrealist news imagery.
@@ -294,7 +307,7 @@ The prompt should be:
 
 Do not include text, words, or letters in the image. Focus on visual metaphors and symbolic imagery."""
 
-            user_message = f"Create a surreal image prompt for this news story:\n\n{story_summary[:500]}"
+            user_message = f"Create a surreal image prompt for this news story:\n\n{summary_to_use[:500]}"
 
             if "gpt-5" in settings.singl_model_name:
                 response = self.client.chat.completions.create(
@@ -317,9 +330,19 @@ Do not include text, words, or letters in the image. Focus on visual metaphors a
                 )
 
             prompt = response.choices[0].message.content.strip()
+
+            # Validate that we got a non-empty prompt
+            if not prompt:
+                logger.warning("GPT returned empty prompt, using fallback")
+                prompt = f"A surreal artistic representation of: {summary_to_use[:200]}"
+
             return prompt
 
         except Exception as e:
             logger.error(f"Error building image prompt: {e}")
             # Fallback to simple prompt
-            return f"A surreal artistic representation of: {story_summary[:200]}"
+            fallback = f"A surreal artistic representation of: {summary_to_use[:200]}"
+            # Ensure fallback is not empty
+            if not fallback or len(fallback) < 10:
+                fallback = "A surreal, artistic representation of breaking news, vivid colors, dreamlike quality"
+            return fallback
