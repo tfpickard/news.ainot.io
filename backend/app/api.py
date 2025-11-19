@@ -14,7 +14,8 @@ from .database import get_db
 from .story_service import StoryService
 from .quote_service import QuoteExtractor
 from .image_service import QuoteImageGenerator
-from .models import FeedItem, FeedConfiguration, StoryVersion, GeneratedImage, UserSettings
+from .analytics_service import AnalyticsService
+from .models import FeedItem, FeedConfiguration, StoryVersion, GeneratedImage, UserSettings, StoryAnalytics
 from .schemas import (
     StoryVersionResponse,
     StoryVersionSummary,
@@ -39,6 +40,13 @@ from .schemas import (
     ConfigResponse,
     UserSettingsUpdate,
     UserSettingsResponse,
+    StoryAnalyticsResponse,
+    SentimentScore,
+    BiasScore,
+    SourceAnalysis,
+    FactCheck,
+    EventData,
+    Prediction,
 )
 from .config import settings
 from .auth import require_auth, get_admin_api_key
@@ -1001,3 +1009,105 @@ async def update_user_settings(
     theme = theme_setting.value if theme_setting else "auto"
 
     return UserSettingsResponse(theme=theme)
+
+
+# ============================================================================
+# Analytics Endpoints
+# ============================================================================
+
+@router.get("/story/{story_id}/analytics", response_model=StoryAnalyticsResponse)
+def get_story_analytics(story_id: int, db: Session = Depends(get_db)):
+    """
+    Get comprehensive analytics for a story including sentiment, bias, fact-checks, and predictions.
+
+    Args:
+        story_id: Story version ID
+    """
+    service = AnalyticsService(db)
+    analytics = service.get_analytics(story_id)
+
+    if not analytics:
+        raise HTTPException(status_code=404, detail=f"Analytics not available for story {story_id}")
+
+    # Convert to response format
+    response_data = {
+        "story_version_id": analytics.story_version_id,
+        "created_at": analytics.created_at,
+        "overall_sentiment": analytics.overall_sentiment,
+        "sentiment_score": SentimentScore(**analytics.sentiment_score) if analytics.sentiment_score else None,
+        "bias_score": BiasScore(**analytics.bias_score) if analytics.bias_score else None,
+        "bias_indicators": analytics.bias_indicators,
+        "source_analysis": [SourceAnalysis(**s) for s in analytics.source_analysis] if analytics.source_analysis else None,
+        "fact_checks": [FactCheck(**f) for f in analytics.fact_checks] if analytics.fact_checks else None,
+        "predictions": [Prediction(**p) for p in analytics.predictions] if analytics.predictions else None,
+        "events": [EventData(**e) for e in analytics.events] if analytics.events else None,
+    }
+
+    return StoryAnalyticsResponse(**response_data)
+
+
+@router.get("/analytics/timeline")
+def get_timeline_events(limit: int = 50, db: Session = Depends(get_db)):
+    """
+    Get timeline of events from recent stories.
+
+    Args:
+        limit: Number of recent stories to include
+    """
+    service = AnalyticsService(db)
+    events = service.get_timeline_events(limit=limit)
+
+    return {"events": events}
+
+
+@router.post("/story/{story_id}/analyze")
+def trigger_story_analysis(story_id: int, db: Session = Depends(get_db)):
+    """
+    Trigger analytics generation for a story (if not already done).
+
+    Args:
+        story_id: Story version ID
+    """
+    story = db.query(StoryVersion).filter(StoryVersion.id == story_id).first()
+    if not story:
+        raise HTTPException(status_code=404, detail=f"Story {story_id} not found")
+
+    service = AnalyticsService(db)
+    analytics = service.analyze_story(story)
+
+    if not analytics:
+        raise HTTPException(status_code=500, detail="Failed to generate analytics")
+
+    return {"message": f"Analytics generated for story {story_id}", "analytics_id": analytics.id}
+
+
+@router.get("/analytics/current")
+def get_current_story_analytics(db: Session = Depends(get_db)):
+    """Get analytics for the current (latest) story."""
+    story_service = StoryService(db)
+    current_story = story_service.get_latest_story()
+
+    if not current_story:
+        raise HTTPException(status_code=404, detail="No current story available")
+
+    analytics_service = AnalyticsService(db)
+    analytics = analytics_service.get_analytics(current_story.id)
+
+    if not analytics:
+        raise HTTPException(status_code=404, detail="Analytics not available for current story")
+
+    # Convert to response format
+    response_data = {
+        "story_version_id": analytics.story_version_id,
+        "created_at": analytics.created_at,
+        "overall_sentiment": analytics.overall_sentiment,
+        "sentiment_score": SentimentScore(**analytics.sentiment_score) if analytics.sentiment_score else None,
+        "bias_score": BiasScore(**analytics.bias_score) if analytics.bias_score else None,
+        "bias_indicators": analytics.bias_indicators,
+        "source_analysis": [SourceAnalysis(**s) for s in analytics.source_analysis] if analytics.source_analysis else None,
+        "fact_checks": [FactCheck(**f) for f in analytics.fact_checks] if analytics.fact_checks else None,
+        "predictions": [Prediction(**p) for p in analytics.predictions] if analytics.predictions else None,
+        "events": [EventData(**e) for e in analytics.events] if analytics.events else None,
+    }
+
+    return StoryAnalyticsResponse(**response_data)

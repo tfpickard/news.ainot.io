@@ -95,3 +95,36 @@ class UserSettings(Base):
 
     def __repr__(self):
         return f"<UserSettings(key='{self.key}', value={self.value})>"
+
+
+class StoryAnalytics(Base):
+    """Analytics data for story versions including sentiment, bias, and forecasting."""
+
+    __tablename__ = "story_analytics"
+
+    id = Column(Integer, primary_key=True, index=True)
+    story_version_id = Column(Integer, nullable=False, index=True, unique=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    # Sentiment analysis
+    overall_sentiment = Column(String, nullable=True)  # positive, negative, neutral
+    sentiment_score = Column(JSON, nullable=True)  # {positive: 0.3, negative: 0.1, neutral: 0.6}
+
+    # Bias analysis
+    bias_indicators = Column(JSON, nullable=True)  # {political_lean: "center", loaded_language: [...], ...}
+    bias_score = Column(JSON, nullable=True)  # Numerical bias metrics
+
+    # Source-specific sentiment/bias
+    source_analysis = Column(JSON, nullable=True)  # Per-source breakdown
+
+    # Fact checking results
+    fact_checks = Column(JSON, nullable=True)  # List of claims and their verification status
+
+    # Forecasting/predictions
+    predictions = Column(JSON, nullable=True)  # What might happen next
+
+    # Event extraction
+    events = Column(JSON, nullable=True)  # Key events extracted from story
+
+    def __repr__(self):
+        return f"<StoryAnalytics(story_version_id={self.story_version_id})>"
