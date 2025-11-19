@@ -8,9 +8,11 @@ export interface StoryVersion {
 	full_text: string;
 	summary: string;
 	sources_snapshot?: {
-		feed_items?: any[];
+		feed_items?: unknown[];
 		item_count: number;
 	};
+	context_summary?: string;
+	token_stats?: { [key: string]: any };
 }
 
 export interface StoryVersionSummary {
