@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { api } from '$lib/api';
+	import PasswordProtect from '$lib/components/PasswordProtect.svelte';
 
 	interface FeedConfig {
 		id: number;
@@ -159,6 +160,7 @@
 	<title>Feed Control - Singl News</title>
 </svelte:head>
 
+<PasswordProtect pageName="Feed Control">
 <div class="control-page">
 	<div class="container">
 		<header class="control-header">
@@ -176,6 +178,7 @@
 				<button class="btn btn-secondary" on:click={importDefaults}>
 					Import Default Feeds
 				</button>
+				<a href="/stats" class="btn btn-secondary">View Statistics</a>
 				<label class="checkbox-label">
 					<input type="checkbox" bind:checked={showInactiveFeeds} />
 					Show inactive feeds
@@ -306,6 +309,7 @@
 		</div>
 	</div>
 </div>
+</PasswordProtect>
 
 <style>
 	.control-page {
@@ -361,6 +365,8 @@
 		border-radius: 4px;
 		cursor: pointer;
 		transition: all 0.2s;
+		text-decoration: none;
+		display: inline-block;
 	}
 
 	.btn-primary {

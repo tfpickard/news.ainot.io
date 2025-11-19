@@ -473,3 +473,106 @@ def import_default_feeds(db: Session = Depends(get_db)):
         "skipped": skipped,
         "total": len(feed_urls)
     }
+
+
+@router.get("/stats")
+def get_stats(db: Session = Depends(get_db)):
+    """Get comprehensive statistics about THE STORY."""
+    from sqlalchemy import func, distinct
+    from datetime import datetime, timedelta, timezone
+
+    service = StoryService(db)
+
+    # Story statistics
+    total_stories = service.get_story_count()
+    latest_story = service.get_latest_story()
+
+    # Time-based story stats
+    now = datetime.now(timezone.utc)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    week_start = now - timedelta(days=7)
+    month_start = now - timedelta(days=30)
+
+    stories_today = db.query(StoryVersion).filter(StoryVersion.created_at >= today_start).count()
+    stories_this_week = db.query(StoryVersion).filter(StoryVersion.created_at >= week_start).count()
+    stories_this_month = db.query(StoryVersion).filter(StoryVersion.created_at >= month_start).count()
+
+    # Feed statistics
+    total_feeds = db.query(FeedConfiguration).count()
+    active_feeds = db.query(FeedConfiguration).filter(FeedConfiguration.is_active == True).count()
+    feeds_with_errors = db.query(FeedConfiguration).filter(FeedConfiguration.fetch_error.isnot(None)).count()
+
+    # Feed item statistics
+    total_feed_items = db.query(FeedItem).count()
+    feed_items_today = db.query(FeedItem).filter(FeedItem.fetched_at >= today_start).count()
+    feed_items_this_week = db.query(FeedItem).filter(FeedItem.fetched_at >= week_start).count()
+
+    # Unique sources
+    unique_sources = db.query(func.count(distinct(FeedItem.feed_name))).scalar()
+
+    # Token usage statistics (from story versions)
+    total_tokens = 0
+    total_cost = 0.0  # Rough estimate
+    story_versions = db.query(StoryVersion).all()
+    for story in story_versions:
+        if story.token_stats and 'total_tokens' in story.token_stats:
+            total_tokens += story.token_stats['total_tokens']
+            # Rough cost estimate: $0.01 per 1K tokens for GPT-4
+            total_cost += (story.token_stats['total_tokens'] / 1000) * 0.01
+
+    # Average story length
+    avg_story_length = db.query(func.avg(func.length(StoryVersion.full_text))).scalar() or 0
+
+    # Most active feeds (by item count)
+    top_feeds = (
+        db.query(
+            FeedItem.feed_name,
+            func.count(FeedItem.id).label('count')
+        )
+        .group_by(FeedItem.feed_name)
+        .order_by(func.count(FeedItem.id).desc())
+        .limit(10)
+        .all()
+    )
+
+    # Recent story generation rate
+    if total_stories > 1:
+        first_story = db.query(StoryVersion).order_by(StoryVersion.created_at.asc()).first()
+        time_span = (latest_story.created_at - first_story.created_at).total_seconds()
+        stories_per_hour = (total_stories / time_span) * 3600 if time_span > 0 else 0
+    else:
+        stories_per_hour = 0
+
+    return {
+        "stories": {
+            "total": total_stories,
+            "today": stories_today,
+            "this_week": stories_this_week,
+            "this_month": stories_this_month,
+            "per_hour": round(stories_per_hour, 2),
+            "latest_at": latest_story.created_at.isoformat() if latest_story else None,
+            "avg_length": int(avg_story_length)
+        },
+        "feeds": {
+            "total": total_feeds,
+            "active": active_feeds,
+            "inactive": total_feeds - active_feeds,
+            "with_errors": feeds_with_errors,
+            "unique_sources": unique_sources
+        },
+        "feed_items": {
+            "total": total_feed_items,
+            "today": feed_items_today,
+            "this_week": feed_items_this_week,
+            "avg_per_story": round(total_feed_items / total_stories, 1) if total_stories > 0 else 0
+        },
+        "ai_usage": {
+            "total_tokens": total_tokens,
+            "estimated_cost_usd": round(total_cost, 2),
+            "avg_tokens_per_story": round(total_tokens / total_stories) if total_stories > 0 else 0
+        },
+        "top_feeds": [
+            {"name": feed[0], "item_count": feed[1]}
+            for feed in top_feeds
+        ]
+    }
