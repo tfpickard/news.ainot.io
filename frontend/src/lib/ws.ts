@@ -3,26 +3,6 @@
 import { writable } from 'svelte/store';
 import type { StoryVersion } from './api';
 
-// Dynamically determine WebSocket URL based on environment
-// In production: use same host with wss/ws based on protocol
-// In development: use localhost:8001 (or environment variable)
-const getWebSocketUrl = () => {
-	if (import.meta.env.VITE_WS_URL) {
-		return import.meta.env.VITE_WS_URL;
-	}
-
-	if (import.meta.env.DEV) {
-		return 'ws://localhost:8001/ws/story';
-	}
-
-	// Production: use current host with appropriate protocol
-	const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-	const host = window.location.host;
-	return `${protocol}//${host}/ws/story`;
-};
-
-const WS_URL = getWebSocketUrl();
-
 type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
 
 class WebSocketClient {
@@ -35,6 +15,23 @@ class WebSocketClient {
 	public latestStory = writable<StoryVersion | null>(null);
 	public hasNewUpdate = writable(false);
 
+	// Dynamically determine WebSocket URL based on environment
+	// Called at connection time (browser-only) to avoid SSR issues
+	private getWebSocketUrl(): string {
+		if (import.meta.env.VITE_WS_URL) {
+			return import.meta.env.VITE_WS_URL;
+		}
+
+		if (import.meta.env.DEV) {
+			return 'ws://localhost:8001/ws/story';
+		}
+
+		// Production: use current host with appropriate protocol
+		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+		const host = window.location.host;
+		return `${protocol}//${host}/ws/story`;
+	}
+
 	connect() {
 		if (this.ws?.readyState === WebSocket.OPEN) {
 			return;
@@ -43,7 +40,8 @@ class WebSocketClient {
 		this.status.set('connecting');
 
 		try {
-			this.ws = new WebSocket(WS_URL);
+			const wsUrl = this.getWebSocketUrl();
+			this.ws = new WebSocket(wsUrl);
 
 			this.ws.onopen = () => {
 				console.log('WebSocket connected');
