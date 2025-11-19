@@ -57,6 +57,18 @@
 	let unsubStory: (() => void) | null = null;
 	let unsubNewUpdate: (() => void) | null = null;
 
+	// Track expanded state for analytics sections
+	let expandedAnalytics: Set<number> = new Set();
+
+	function toggleAnalytics(storyId: number) {
+		if (expandedAnalytics.has(storyId)) {
+			expandedAnalytics.delete(storyId);
+		} else {
+			expandedAnalytics.add(storyId);
+		}
+		expandedAnalytics = expandedAnalytics; // Trigger reactivity
+	}
+
 	onMount(async () => {
 		// Subscribe to WebSocket stores (browser-only)
 		unsubStatus = wsClient.status.subscribe((value) => {
@@ -282,45 +294,62 @@
 						<!-- Analytics dashboards -->
 						{#if storyData.analytics}
 							<div class="analytics-section">
-								<div class="analytics-grid">
-									<!-- Sentiment -->
-									{#if storyData.analytics.sentiment_score}
-										<SentimentDashboard
-											sentiment={{
-												overall: storyData.analytics.overall_sentiment || 'neutral',
-												score: storyData.analytics.sentiment_score
-											}}
-										/>
-									{/if}
+								<button
+									class="analytics-toggle"
+									on:click={() => toggleAnalytics(storyData.story.id)}
+									aria-expanded={expandedAnalytics.has(storyData.story.id)}
+								>
+									<span class="toggle-icon">
+										{expandedAnalytics.has(storyData.story.id) ? '▼' : '▶'}
+									</span>
+									<span class="toggle-text">
+										{expandedAnalytics.has(storyData.story.id) ? 'Hide' : 'Show'} Analysis
+									</span>
+								</button>
 
-									<!-- Bias -->
-									{#if storyData.analytics.bias_score}
-										<BiasDashboard
-											biasScore={storyData.analytics.bias_score}
-											biasIndicators={storyData.analytics.bias_indicators}
-										/>
-									{/if}
+								{#if expandedAnalytics.has(storyData.story.id)}
+									<div class="analytics-content">
+										<div class="analytics-grid">
+											<!-- Sentiment -->
+											{#if storyData.analytics.sentiment_score}
+												<SentimentDashboard
+													sentiment={{
+														overall: storyData.analytics.overall_sentiment || 'neutral',
+														score: storyData.analytics.sentiment_score
+													}}
+												/>
+											{/if}
 
-									<!-- Event Timeline -->
-									{#if storyData.analytics.events && storyData.analytics.events.length > 0}
-										<EventTimeline events={storyData.analytics.events} />
-									{/if}
+											<!-- Bias -->
+											{#if storyData.analytics.bias_score}
+												<BiasDashboard
+													biasScore={storyData.analytics.bias_score}
+													biasIndicators={storyData.analytics.bias_indicators}
+												/>
+											{/if}
 
-									<!-- Fact Checking -->
-									{#if storyData.analytics.fact_checks && storyData.analytics.fact_checks.length > 0}
-										<FactCheckDashboard factChecks={storyData.analytics.fact_checks} />
-									{/if}
+											<!-- Event Timeline -->
+											{#if storyData.analytics.events && storyData.analytics.events.length > 0}
+												<EventTimeline events={storyData.analytics.events} />
+											{/if}
 
-									<!-- Forecasting -->
-									{#if storyData.analytics.predictions && storyData.analytics.predictions.length > 0}
-										<ForecastDashboard predictions={storyData.analytics.predictions} />
-									{/if}
+											<!-- Fact Checking -->
+											{#if storyData.analytics.fact_checks && storyData.analytics.fact_checks.length > 0}
+												<FactCheckDashboard factChecks={storyData.analytics.fact_checks} />
+											{/if}
 
-									<!-- Cross-Source Analysis -->
-									{#if storyData.analytics.source_analysis && storyData.analytics.source_analysis.length > 0}
-										<CrossSourceDashboard sourceAnalysis={storyData.analytics.source_analysis} />
-									{/if}
-								</div>
+											<!-- Forecasting -->
+											{#if storyData.analytics.predictions && storyData.analytics.predictions.length > 0}
+												<ForecastDashboard predictions={storyData.analytics.predictions} />
+											{/if}
+
+											<!-- Cross-Source Analysis -->
+											{#if storyData.analytics.source_analysis && storyData.analytics.source_analysis.length > 0}
+												<CrossSourceDashboard sourceAnalysis={storyData.analytics.source_analysis} />
+											{/if}
+										</div>
+									</div>
+								{/if}
 							</div>
 						{/if}
 
@@ -501,6 +530,54 @@
 
 	.analytics-section {
 		margin-top: var(--spacing-xl);
+	}
+
+	.analytics-toggle {
+		width: 100%;
+		background: var(--color-highlight);
+		border: 1px solid var(--color-border);
+		border-radius: 6px;
+		padding: var(--spacing-md);
+		margin-bottom: var(--spacing-md);
+		font-family: var(--font-sans);
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: var(--color-text-light);
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-sm);
+		transition: all 0.2s ease;
+	}
+
+	.analytics-toggle:hover {
+		background: var(--color-border);
+		color: var(--color-text);
+	}
+
+	.toggle-icon {
+		font-size: 0.75rem;
+		transition: transform 0.2s ease;
+	}
+
+	.toggle-text {
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+
+	.analytics-content {
+		animation: slideIn 0.3s ease;
+	}
+
+	@keyframes slideIn {
+		from {
+			opacity: 0;
+			transform: translateY(-10px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
 	}
 
 	.analytics-grid {
