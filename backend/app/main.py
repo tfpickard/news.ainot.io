@@ -1,7 +1,7 @@
 """Main FastAPI application."""
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
@@ -69,7 +69,7 @@ app.include_router(api_router)
 
 # WebSocket endpoint
 @app.websocket("/ws/story")
-async def websocket_story_endpoint(websocket):
+async def websocket_story_endpoint(websocket: WebSocket):
     """WebSocket endpoint for real-time story updates."""
     await websocket_endpoint(websocket)
 
