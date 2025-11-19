@@ -4,6 +4,7 @@ from datetime import datetime, timezone, timedelta
 from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
+from sqlalchemy.exc import IntegrityError
 
 from .models import StoryVersion, FeedItem, FeedConfiguration
 from .schemas import StoryVersionCreate
@@ -58,9 +59,14 @@ class StoryService:
         rss_items = self.rss_client.fetch_all_feeds(feed_urls)
 
         new_count = 0
+        seen_hashes = set()  # Track hashes in current batch
 
         for item in rss_items:
-            # Check if item already exists
+            # Skip if we've already seen this hash in this batch
+            if item.content_hash in seen_hashes:
+                continue
+
+            # Check if item already exists in database
             existing = (
                 self.db.query(FeedItem)
                 .filter(FeedItem.content_hash == item.content_hash)
@@ -79,10 +85,67 @@ class StoryService:
                     raw=item.raw,
                 )
                 self.db.add(feed_item)
+                seen_hashes.add(item.content_hash)
                 new_count += 1
 
-        self.db.commit()
-        logger.info(f"Ingested {new_count} new feed items")
+        # Commit with error handling for race conditions
+        try:
+            self.db.commit()
+            logger.info(f"Ingested {new_count} new feed items")
+        except IntegrityError as e:
+            self.db.rollback()
+            logger.warning(f"Integrity error during feed ingestion (likely duplicate): {e}")
+            # Re-attempt with individual commits to save what we can
+            new_count = self._ingest_feeds_individually(rss_items)
+            logger.info(f"Re-ingested {new_count} items individually after integrity error")
+
+        return new_count
+
+    def _ingest_feeds_individually(self, rss_items: List[RSSItem]) -> int:
+        """
+        Ingest feed items one at a time with individual commits.
+        Used as fallback when batch insert fails.
+
+        Args:
+            rss_items: List of RSS items to ingest
+
+        Returns:
+            Number of items successfully ingested
+        """
+        new_count = 0
+
+        for item in rss_items:
+            try:
+                # Check if item already exists
+                existing = (
+                    self.db.query(FeedItem)
+                    .filter(FeedItem.content_hash == item.content_hash)
+                    .first()
+                )
+
+                if not existing:
+                    feed_item = FeedItem(
+                        feed_url=item.feed_url,
+                        feed_name=item.feed_name,
+                        title=item.title,
+                        summary=item.summary,
+                        link=item.link,
+                        published_at=item.published_at,
+                        content_hash=item.content_hash,
+                        raw=item.raw,
+                    )
+                    self.db.add(feed_item)
+                    self.db.commit()
+                    new_count += 1
+            except IntegrityError:
+                # Item already exists (race condition), skip it
+                self.db.rollback()
+                continue
+            except Exception as e:
+                # Log other errors but continue
+                logger.error(f"Error ingesting feed item: {e}")
+                self.db.rollback()
+                continue
 
         return new_count
 
