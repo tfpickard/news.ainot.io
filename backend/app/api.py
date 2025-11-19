@@ -9,7 +9,7 @@ from .database import get_db
 from .story_service import StoryService
 from .quote_service import QuoteExtractor
 from .image_service import QuoteImageGenerator
-from .models import FeedItem, FeedConfiguration
+from .models import FeedItem, FeedConfiguration, StoryVersion
 from .schemas import (
     StoryVersionResponse,
     StoryVersionSummary,
