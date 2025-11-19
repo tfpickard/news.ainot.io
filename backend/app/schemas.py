@@ -136,3 +136,37 @@ class APIDocumentation(BaseModel):
     endpoints: List[Dict[str, Any]]
     examples: List[Dict[str, Any]]
     rate_limits: Dict[str, Any]
+
+
+class FeedConfigurationBase(BaseModel):
+    """Base schema for feed configuration."""
+    name: str
+    url: str
+    category: Optional[str] = None
+    is_active: bool = True
+    priority: int = 0
+
+
+class FeedConfigurationCreate(FeedConfigurationBase):
+    """Schema for creating a feed configuration."""
+    pass
+
+
+class FeedConfigurationUpdate(BaseModel):
+    """Schema for updating a feed configuration."""
+    name: Optional[str] = None
+    url: Optional[str] = None
+    category: Optional[str] = None
+    is_active: Optional[bool] = None
+    priority: Optional[int] = None
+
+
+class FeedConfigurationResponse(FeedConfigurationBase):
+    """Schema for feed configuration responses."""
+    id: int
+    created_at: datetime
+    last_fetched: Optional[datetime] = None
+    fetch_error: Optional[str] = None
+
+    class Config:
+        from_attributes = True

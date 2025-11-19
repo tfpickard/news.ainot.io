@@ -5,7 +5,7 @@ from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 
-from .models import StoryVersion, FeedItem
+from .models import StoryVersion, FeedItem, FeedConfiguration
 from .schemas import StoryVersionCreate
 from .rss_client import RSSClient, RSSItem
 from .openai_client import StoryGenerator
@@ -22,6 +22,29 @@ class StoryService:
         self.rss_client = RSSClient()
         self.story_generator = StoryGenerator()
 
+    def get_active_feed_urls(self) -> List[str]:
+        """
+        Get list of active feed URLs, preferring database configuration.
+
+        Returns:
+            List of feed URLs
+        """
+        # Try to get feeds from database first
+        db_feeds = (
+            self.db.query(FeedConfiguration)
+            .filter(FeedConfiguration.is_active == True)
+            .order_by(FeedConfiguration.priority.desc())
+            .all()
+        )
+
+        if db_feeds:
+            logger.info(f"Using {len(db_feeds)} feeds from database configuration")
+            return [feed.url for feed in db_feeds]
+        else:
+            # Fall back to config file
+            logger.info("No database feeds found, using config file feeds")
+            return settings.get_feed_list()
+
     def ingest_feeds(self) -> int:
         """
         Fetch latest RSS feeds and store new items in database.
@@ -31,7 +54,7 @@ class StoryService:
         """
         logger.info("Starting RSS feed ingestion")
 
-        feed_urls = settings.get_feed_list()
+        feed_urls = self.get_active_feed_urls()
         rss_items = self.rss_client.fetch_all_feeds(feed_urls)
 
         new_count = 0

@@ -7,7 +7,7 @@ from typing import List
 from .database import get_db
 from .story_service import StoryService
 from .quote_service import QuoteExtractor
-from .models import FeedItem
+from .models import FeedItem, FeedConfiguration
 from .schemas import (
     StoryVersionResponse,
     StoryVersionSummary,
@@ -19,6 +19,9 @@ from .schemas import (
     SourceDetail,
     SEOMetadata,
     APIDocumentation,
+    FeedConfigurationResponse,
+    FeedConfigurationCreate,
+    FeedConfigurationUpdate,
 )
 from .config import settings
 
@@ -328,3 +331,145 @@ def get_api_docs():
             "attribution": "Please include 'Powered by Singl News' when using this API"
         }
     )
+
+
+# Feed Configuration Management Endpoints
+
+@router.get("/feeds", response_model=List[FeedConfigurationResponse])
+def get_feeds(
+    active_only: bool = False,
+    db: Session = Depends(get_db)
+):
+    """
+    Get all configured RSS feeds.
+
+    Args:
+        active_only: If True, only return active feeds
+    """
+    query = db.query(FeedConfiguration)
+
+    if active_only:
+        query = query.filter(FeedConfiguration.is_active == True)
+
+    feeds = query.order_by(FeedConfiguration.priority.desc(), FeedConfiguration.name).all()
+    return feeds
+
+
+@router.get("/feeds/{feed_id}", response_model=FeedConfigurationResponse)
+def get_feed(feed_id: int, db: Session = Depends(get_db)):
+    """Get a specific feed configuration by ID."""
+    feed = db.query(FeedConfiguration).filter(FeedConfiguration.id == feed_id).first()
+
+    if not feed:
+        raise HTTPException(status_code=404, detail=f"Feed {feed_id} not found")
+
+    return feed
+
+
+@router.post("/feeds", response_model=FeedConfigurationResponse)
+def create_feed(feed: FeedConfigurationCreate, db: Session = Depends(get_db)):
+    """Create a new feed configuration."""
+    # Check if URL already exists
+    existing = db.query(FeedConfiguration).filter(FeedConfiguration.url == feed.url).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Feed URL already exists")
+
+    db_feed = FeedConfiguration(**feed.dict())
+    db.add(db_feed)
+    db.commit()
+    db.refresh(db_feed)
+
+    logger.info(f"Created new feed: {db_feed.name} ({db_feed.url})")
+    return db_feed
+
+
+@router.put("/feeds/{feed_id}", response_model=FeedConfigurationResponse)
+def update_feed(
+    feed_id: int,
+    feed_update: FeedConfigurationUpdate,
+    db: Session = Depends(get_db)
+):
+    """Update an existing feed configuration."""
+    db_feed = db.query(FeedConfiguration).filter(FeedConfiguration.id == feed_id).first()
+
+    if not db_feed:
+        raise HTTPException(status_code=404, detail=f"Feed {feed_id} not found")
+
+    # Update only provided fields
+    update_data = feed_update.dict(exclude_unset=True)
+
+    # Check if URL is being changed and if it conflicts
+    if "url" in update_data and update_data["url"] != db_feed.url:
+        existing = db.query(FeedConfiguration).filter(
+            FeedConfiguration.url == update_data["url"],
+            FeedConfiguration.id != feed_id
+        ).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Feed URL already exists")
+
+    for key, value in update_data.items():
+        setattr(db_feed, key, value)
+
+    db.commit()
+    db.refresh(db_feed)
+
+    logger.info(f"Updated feed: {db_feed.name} ({db_feed.id})")
+    return db_feed
+
+
+@router.delete("/feeds/{feed_id}")
+def delete_feed(feed_id: int, db: Session = Depends(get_db)):
+    """Delete a feed configuration."""
+    db_feed = db.query(FeedConfiguration).filter(FeedConfiguration.id == feed_id).first()
+
+    if not db_feed:
+        raise HTTPException(status_code=404, detail=f"Feed {feed_id} not found")
+
+    feed_name = db_feed.name
+    db.delete(db_feed)
+    db.commit()
+
+    logger.info(f"Deleted feed: {feed_name} ({feed_id})")
+    return {"message": f"Feed {feed_id} deleted successfully"}
+
+
+@router.post("/feeds/import-defaults")
+def import_default_feeds(db: Session = Depends(get_db)):
+    """Import default feeds from config into database."""
+    from .config import settings
+
+    feed_urls = settings.get_feed_list()
+    imported = 0
+    skipped = 0
+
+    for url in feed_urls:
+        # Check if already exists
+        existing = db.query(FeedConfiguration).filter(FeedConfiguration.url == url).first()
+        if existing:
+            skipped += 1
+            continue
+
+        # Extract name from URL
+        from urllib.parse import urlparse
+        parsed = urlparse(url)
+        domain = parsed.netloc.replace('www.', '')
+        name = domain.split('.')[0].title() if domain else url
+
+        # Create feed
+        feed = FeedConfiguration(
+            name=name,
+            url=url,
+            is_active=True,
+            priority=0
+        )
+        db.add(feed)
+        imported += 1
+
+    db.commit()
+
+    logger.info(f"Imported {imported} default feeds, skipped {skipped} existing")
+    return {
+        "imported": imported,
+        "skipped": skipped,
+        "total": len(feed_urls)
+    }
