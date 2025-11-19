@@ -55,7 +55,7 @@ class Settings(BaseSettings):
         "https://www.vice.com/en/rss,"
         # International Perspectives
         "https://www.scmp.com/rss/91/feed,"
-        "https://www.rt.com/rss/,"
+        "https://www.rt.com/rss,"
         "https://timesofindia.indiatimes.com/rssfeedstopstories.cms,"
         # Arts & Books
         "https://www.artforum.com/rss.xml,"
