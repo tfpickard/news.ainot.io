@@ -8,7 +8,8 @@
 
 <svelte:head>
 	<title>{SITE_NAME}</title>
-	<meta name="description" content="Global Continuity Desk delivering unified narrative coverage" />
+	<meta name="description" content="The Singular, Unified, Authoritative and Eternal Narrative that's neither fit nor unfit to print" />
+	<meta name="theme-color" content="#1a1a1a" />
 </svelte:head>
 
 <div class="site">
