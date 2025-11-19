@@ -37,7 +37,7 @@ services:
       SINGL_LOG_LEVEL: ${SINGL_LOG_LEVEL:-INFO}
       SINGL_WS_ORIGIN: "*"
     ports:
-      - "8000:8000"
+      - "8001:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -54,11 +54,11 @@ services:
       dockerfile: Dockerfile
     container_name: singl-frontend
     environment:
-      VITE_API_URL: http://localhost:8000
-      VITE_WS_URL: ws://localhost:8000/ws/story
-      ORIGIN: http://localhost:3000
+      VITE_API_URL: http://localhost:8001
+      VITE_WS_URL: ws://localhost:8001/ws/story
+      ORIGIN: http://localhost:4001
     ports:
-      - "3000:3000"
+      - "4001:3000"
     depends_on:
       - backend
     networks:
