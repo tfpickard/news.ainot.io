@@ -78,21 +78,27 @@ class AnalyticsService:
             except IntegrityError as ie:
                 # Race condition: another request already created analytics for this story
                 logger.warning(f"Analytics already exist for story {story_id} (race condition)")
-                # Expunge the failed analytics object from session
-                self.db.expunge(analytics)
                 # Rollback to clear the failed transaction
                 self.db.rollback()
+                # Expunge all objects to fully reset session state
+                self.db.expunge_all()
 
-                # Fetch and return the existing analytics in a new query
-                existing = (
-                    self.db.query(StoryAnalytics)
-                    .filter(StoryAnalytics.story_version_id == story_id)
-                    .first()
-                )
-                if existing:
-                    return existing
-                else:
-                    logger.error(f"Could not find existing analytics for story {story_id} after race condition")
+                # Query for the existing analytics created by the other request
+                try:
+                    existing = (
+                        self.db.query(StoryAnalytics)
+                        .filter(StoryAnalytics.story_version_id == story_id)
+                        .first()
+                    )
+                    if existing:
+                        return existing
+                    else:
+                        logger.error(f"Could not find existing analytics for story {story_id} after race condition")
+                        return None
+                except Exception as query_error:
+                    logger.error(f"Error querying for existing analytics: {query_error}")
+                    # If we still can't query, just return None
+                    # The analytics exist, the caller can retry if needed
                     return None
 
         except Exception as e:
