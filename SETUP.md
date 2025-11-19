@@ -87,13 +87,13 @@ Backend will be available at http://localhost:8000
 
 ```bash
 cd frontend
-npm install
+pnpm install
 
 # Create .env file
 echo "VITE_API_URL=http://localhost:8000" > .env
 echo "VITE_WS_URL=ws://localhost:8000/ws/story" >> .env
 
-npm run dev
+pnpm run dev
 ```
 
 Frontend will be available at http://localhost:3000

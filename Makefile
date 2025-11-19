@@ -36,13 +36,13 @@ test-backend:
 	cd backend && pytest -v
 
 test-frontend:
-	cd frontend && npm run test
+	cd frontend && pnpm run test
 
 dev-backend:
 	cd backend && python -m app.main
 
 dev-frontend:
-	cd frontend && npm run dev
+	cd frontend && pnpm run dev
 
 clean:
 	docker-compose down -v
@@ -52,6 +52,7 @@ clean:
 	rm -rf frontend/node_modules
 	rm -rf frontend/.svelte-kit
 	rm -rf frontend/build
+	rm -rf frontend/.pnpm-store
 
 migrate:
 	docker-compose exec backend alembic upgrade head
@@ -73,4 +74,4 @@ install-backend:
 	cd backend && pip install -r requirements.txt
 
 install-frontend:
-	cd frontend && npm install
+	cd frontend && pnpm install
