@@ -8,6 +8,7 @@
 	import ForecastDashboard from '$lib/components/ForecastDashboard.svelte';
 	import EventTimeline from '$lib/components/EventTimeline.svelte';
 	import CrossSourceDashboard from '$lib/components/CrossSourceDashboard.svelte';
+	import AudioNarration from '$lib/components/AudioNarration.svelte';
 
 	interface GeneratedImage {
 		id: number;
@@ -278,6 +279,9 @@
 						<div class="story-content">
 							{@html storyData.story.full_text.replace(/\n\n/g, '</p><p>').replace(/^(.*)$/, '<p>$1</p>')}
 						</div>
+
+						<!-- Audio Narration -->
+						<AudioNarration storyText={storyData.story.full_text} storyId={storyData.story.id} />
 
 						<!-- Image integration -->
 						{#if storyData.image}

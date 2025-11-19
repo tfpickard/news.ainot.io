@@ -15,6 +15,8 @@ from .story_service import StoryService
 from .quote_service import QuoteExtractor
 from .image_service import QuoteImageGenerator
 from .analytics_service import AnalyticsService
+from .trends_service import TrendsService
+from .search_service import SearchService
 from .models import FeedItem, FeedConfiguration, StoryVersion, GeneratedImage, UserSettings, StoryAnalytics
 from .schemas import (
     StoryVersionResponse,
@@ -47,6 +49,21 @@ from .schemas import (
     FactCheck,
     EventData,
     Prediction,
+    TrendAnalyticsResponse,
+    SentimentTrendResponse,
+    KeywordCloudResponse,
+    AbsurdityTrendResponse,
+    SourceDominanceResponse,
+    SearchResponse,
+    SearchResultItem,
+    FeedSearchResult,
+    EntitiesResponse,
+    EntityCategoryResults,
+    EntityInfo,
+    EntityTimelineResponse,
+    TimelineEvent,
+    RelatedStoriesResponse,
+    RelatedStory,
 )
 from .config import settings
 from .auth import require_auth, get_admin_api_key
@@ -1111,3 +1128,175 @@ def get_current_story_analytics(db: Session = Depends(get_db)):
     }
 
     return StoryAnalyticsResponse(**response_data)
+
+
+# Trend Analytics Endpoints
+
+@router.get("/trends/all", response_model=TrendAnalyticsResponse)
+def get_all_trends(
+    days: int = 7,
+    limit: Optional[int] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Get complete trend analytics including sentiment, keywords, absurdity, and source dominance.
+
+    Args:
+        days: Number of days to look back (default: 7)
+        limit: Optional limit on number of stories to analyze
+    """
+    service = TrendsService(db)
+    return service.get_full_trends(days=days, limit=limit)
+
+
+@router.get("/trends/sentiment", response_model=SentimentTrendResponse)
+def get_sentiment_trends(
+    days: int = 7,
+    limit: Optional[int] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Get sentiment trends over time.
+
+    Args:
+        days: Number of days to look back (default: 7)
+        limit: Optional limit on number of stories
+    """
+    service = TrendsService(db)
+    return service.get_sentiment_trends(days=days, limit=limit)
+
+
+@router.get("/trends/keywords", response_model=KeywordCloudResponse)
+def get_keyword_cloud(
+    days: int = 7,
+    limit: Optional[int] = None,
+    min_freq: int = 2,
+    db: Session = Depends(get_db)
+):
+    """
+    Get keyword frequency data for word cloud visualization.
+
+    Args:
+        days: Number of days to look back (default: 7)
+        limit: Optional limit on number of stories
+        min_freq: Minimum frequency for a keyword to be included (default: 2)
+    """
+    service = TrendsService(db)
+    return service.get_keyword_cloud(days=days, limit=limit, min_freq=min_freq)
+
+
+@router.get("/trends/absurdity", response_model=AbsurdityTrendResponse)
+def get_absurdity_trends(
+    days: int = 7,
+    limit: Optional[int] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Get absurdity score trends over time.
+
+    Args:
+        days: Number of days to look back (default: 7)
+        limit: Optional limit on number of stories
+    """
+    service = TrendsService(db)
+    return service.get_absurdity_trends(days=days, limit=limit)
+
+
+@router.get("/trends/sources", response_model=SourceDominanceResponse)
+def get_source_dominance(
+    days: int = 7,
+    db: Session = Depends(get_db)
+):
+    """
+    Get source contribution and dominance metrics.
+
+    Args:
+        days: Number of days to look back (default: 7)
+    """
+    service = TrendsService(db)
+    return service.get_source_dominance(days=days)
+
+
+# Search Endpoints
+
+@router.get("/search", response_model=SearchResponse)
+def search_stories(
+    q: str,
+    limit: int = 20,
+    offset: int = 0,
+    include_feeds: bool = False,
+    db: Session = Depends(get_db)
+):
+    """
+    Search stories by keywords.
+
+    Args:
+        q: Search query
+        limit: Maximum number of results (default: 20)
+        offset: Pagination offset (default: 0)
+        include_feeds: Include feed item results (default: false)
+    """
+    if not q or len(q) < 2:
+        raise HTTPException(status_code=400, detail="Query must be at least 2 characters")
+
+    service = SearchService(db)
+    return service.search_stories(q, limit=limit, offset=offset, include_feed_items=include_feeds)
+
+
+@router.get("/search/entities", response_model=EntitiesResponse)
+def get_entities(
+    limit: int = 50,
+    db: Session = Depends(get_db)
+):
+    """
+    Get tracked entities (people, places, organizations) across recent stories.
+
+    Args:
+        limit: Number of recent stories to analyze (default: 50)
+    """
+    service = SearchService(db)
+    data = service.track_entities(limit=limit)
+    
+    return EntitiesResponse(
+        total_stories_analyzed=data["total_stories_analyzed"],
+        entities=EntityCategoryResults(**data["entities"])
+    )
+
+
+@router.get("/search/entity/{entity_name}/timeline", response_model=EntityTimelineResponse)
+def get_entity_timeline(
+    entity_name: str,
+    limit: int = 100,
+    db: Session = Depends(get_db)
+):
+    """
+    Get timeline of stories mentioning a specific entity.
+
+    Args:
+        entity_name: Name of the entity to track
+        limit: Maximum number of stories (default: 100)
+    """
+    service = SearchService(db)
+    return service.get_entity_timeline(entity_name, limit=limit)
+
+
+@router.get("/search/related/{story_id}", response_model=RelatedStoriesResponse)
+def get_related_stories(
+    story_id: int,
+    limit: int = 5,
+    db: Session = Depends(get_db)
+):
+    """
+    Find stories related to a given story.
+
+    Args:
+        story_id: ID of the reference story
+        limit: Maximum number of related stories (default: 5)
+    """
+    service = SearchService(db)
+    related = service.get_related_stories(story_id, limit=limit)
+    
+    return RelatedStoriesResponse(
+        story_id=story_id,
+        related_stories=related
+    )

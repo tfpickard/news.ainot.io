@@ -21,6 +21,8 @@
 			<nav class="nav">
 				<a href="/" class="nav-link" class:active={$page.url.pathname === '/'}>Live</a>
 				<a href="/history" class="nav-link" class:active={$page.url.pathname === '/history'}>Archive</a>
+				<a href="/search" class="nav-link" class:active={$page.url.pathname === '/search'}>Search</a>
+				<a href="/trends" class="nav-link" class:active={$page.url.pathname === '/trends'}>Trends</a>
 				<a href="/stats" class="nav-link" class:active={$page.url.pathname === '/stats'}>Stats</a>
 				<a href="/about" class="nav-link" class:active={$page.url.pathname === '/about'}>About</a>
 				<a href="/api-docs" class="nav-link" class:active={$page.url.pathname === '/api-docs'}>API</a>
@@ -138,12 +140,26 @@
 
 	@media (max-width: 768px) {
 		.site-title {
-			font-size: 3rem;
+			font-size: 2.5rem;
+		}
+
+		.site-tagline {
+			font-size: 0.75rem;
 		}
 
 		.masthead {
 			padding: var(--spacing-md) 0;
 			margin-bottom: var(--spacing-lg);
+		}
+
+		.nav {
+			flex-wrap: wrap;
+			gap: var(--spacing-xs);
+			font-size: 0.75rem;
+		}
+
+		.nav-link {
+			padding: var(--spacing-xs) var(--spacing-xs);
 		}
 	}
 </style>
