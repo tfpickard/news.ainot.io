@@ -1,6 +1,8 @@
 // API client for backend communication
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// Use relative URL in production (empty string means same origin)
+// In development, use localhost:8001 (or environment variable)
+const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:8001' : '');
 
 export interface StoryVersion {
 	id: number;
