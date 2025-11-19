@@ -18,25 +18,60 @@ class QuoteImageGenerator:
 
     def _get_font(self, size: int, bold: bool = False):
         """Get font, falling back to default if custom fonts unavailable."""
+        font_paths = [
+            # Debian/Ubuntu paths
+            ("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf"),
+            # Alpine paths
+            ("/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf", "/usr/share/fonts/dejavu/DejaVuSerif.ttf"),
+            # Fallback to sans for both
+            ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
+        ]
+
+        for bold_path, regular_path in font_paths:
+            try:
+                path = bold_path if bold else regular_path
+                return ImageFont.truetype(path, size)
+            except (OSError, IOError):
+                continue
+
+        # Fall back to default font if nothing works
         try:
-            # Try to use better fonts if available
-            if bold:
-                return ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", size)
-            return ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf", size)
-        except:
-            # Fall back to default font
             return ImageFont.load_default()
+        except:
+            # Ultimate fallback - use basic PIL font
+            return None
 
     def _wrap_text(self, text: str, font, max_width: int) -> list:
         """Wrap text to fit within max width."""
+        if font is None:
+            # Simple word wrapping without font metrics
+            words = text.split()
+            lines = []
+            current_line = []
+            max_words_per_line = 8
+
+            for word in words:
+                current_line.append(word)
+                if len(current_line) >= max_words_per_line:
+                    lines.append(' '.join(current_line))
+                    current_line = []
+
+            if current_line:
+                lines.append(' '.join(current_line))
+            return lines
+
         words = text.split()
         lines = []
         current_line = []
 
         for word in words:
             test_line = ' '.join(current_line + [word])
-            bbox = font.getbbox(test_line)
-            width = bbox[2] - bbox[0]
+            try:
+                bbox = font.getbbox(test_line)
+                width = bbox[2] - bbox[0]
+            except:
+                # If font doesn't support getbbox, estimate
+                width = len(test_line) * (font.size * 0.6 if hasattr(font, 'size') else 10)
 
             if width <= max_width:
                 current_line.append(word)

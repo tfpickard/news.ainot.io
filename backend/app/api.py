@@ -186,17 +186,26 @@ def get_quote_image(
     Returns:
         PNG image of the quote card
     """
+    logger.info(f"Generating quote image for story {story_id}, quote index {quote_index}")
+
     service = StoryService(db)
     story = service.get_story_by_id(story_id)
 
     if not story:
+        logger.warning(f"Story {story_id} not found")
         raise HTTPException(status_code=404, detail=f"Story {story_id} not found")
 
     # Extract quotes
-    extractor = QuoteExtractor()
-    quotes = extractor.extract_quotes(story.full_text, count=10)
+    try:
+        extractor = QuoteExtractor()
+        quotes = extractor.extract_quotes(story.full_text, count=10)
+        logger.info(f"Extracted {len(quotes)} quotes from story {story_id}")
+    except Exception as e:
+        logger.error(f"Failed to extract quotes: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to extract quotes: {str(e)}")
 
     if not quotes or quote_index >= len(quotes):
+        logger.warning(f"Quote index {quote_index} out of range (story has {len(quotes)} quotes)")
         raise HTTPException(
             status_code=404,
             detail=f"Quote index {quote_index} not found (story has {len(quotes)} quotes)"
@@ -205,12 +214,18 @@ def get_quote_image(
     quote = quotes[quote_index]
 
     # Generate image
-    generator = QuoteImageGenerator()
-    image_bytes = generator.generate_quote_image(
-        quote_text=quote['text'],
-        category=quote['category'],
-        absurdity_score=quote['absurdity_score']
-    )
+    try:
+        logger.info(f"Generating image for quote: {quote['text'][:50]}...")
+        generator = QuoteImageGenerator()
+        image_bytes = generator.generate_quote_image(
+            quote_text=quote['text'],
+            category=quote['category'],
+            absurdity_score=quote['absurdity_score']
+        )
+        logger.info(f"Image generated successfully for story {story_id}")
+    except Exception as e:
+        logger.error(f"Failed to generate image: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to generate image: {str(e)}")
 
     return StreamingResponse(
         image_bytes,
