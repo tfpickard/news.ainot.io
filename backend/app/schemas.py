@@ -288,7 +288,7 @@ class FactCheck(BaseModel):
     verdict: str  # "true", "false", "partially-true", "unverified", "misleading"
     confidence: float  # 0.0 to 1.0
     explanation: str
-    sources: List[str]
+    sources: List[str] = []  # Default to empty list if not provided
 
 
 class EventData(BaseModel):
