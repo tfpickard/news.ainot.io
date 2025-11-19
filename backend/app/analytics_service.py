@@ -31,18 +31,20 @@ class AnalyticsService:
         Returns:
             StoryAnalytics object with results
         """
-        logger.info(f"Analyzing story {story.id}")
+        # Capture story ID early to avoid lazy loading issues after rollback
+        story_id = story.id
+        logger.info(f"Analyzing story {story_id}")
 
         try:
             # Check if analytics already exist
             existing = (
                 self.db.query(StoryAnalytics)
-                .filter(StoryAnalytics.story_version_id == story.id)
+                .filter(StoryAnalytics.story_version_id == story_id)
                 .first()
             )
 
             if existing:
-                logger.info(f"Analytics already exist for story {story.id}")
+                logger.info(f"Analytics already exist for story {story_id}")
                 return existing
 
             # Perform all analyses
@@ -55,7 +57,7 @@ class AnalyticsService:
 
             # Create analytics record
             analytics = StoryAnalytics(
-                story_version_id=story.id,
+                story_version_id=story_id,
                 overall_sentiment=sentiment.get("overall"),
                 sentiment_score=sentiment.get("score"),
                 bias_indicators=bias.get("indicators"),
@@ -71,11 +73,11 @@ class AnalyticsService:
             try:
                 self.db.commit()
                 self.db.refresh(analytics)
-                logger.info(f"Successfully created analytics for story {story.id}")
+                logger.info(f"Successfully created analytics for story {story_id}")
                 return analytics
             except IntegrityError as ie:
                 # Race condition: another request already created analytics for this story
-                logger.warning(f"Analytics already exist for story {story.id} (race condition)")
+                logger.warning(f"Analytics already exist for story {story_id} (race condition)")
                 # Expunge the failed analytics object from session
                 self.db.expunge(analytics)
                 # Rollback to clear the failed transaction
@@ -84,17 +86,17 @@ class AnalyticsService:
                 # Fetch and return the existing analytics in a new query
                 existing = (
                     self.db.query(StoryAnalytics)
-                    .filter(StoryAnalytics.story_version_id == story.id)
+                    .filter(StoryAnalytics.story_version_id == story_id)
                     .first()
                 )
                 if existing:
                     return existing
                 else:
-                    logger.error(f"Could not find existing analytics for story {story.id} after race condition")
+                    logger.error(f"Could not find existing analytics for story {story_id} after race condition")
                     return None
 
         except Exception as e:
-            logger.error(f"Failed to analyze story {story.id}: {e}", exc_info=True)
+            logger.error(f"Failed to analyze story {story_id}: {e}", exc_info=True)
             self.db.rollback()
             return None
 
