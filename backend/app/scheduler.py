@@ -10,6 +10,8 @@ from .story_service import StoryService
 from .config import settings
 from .ws import get_connection_manager
 from .schemas import StoryVersionResponse
+from .openai_client import ImageGenerator
+from .models import GeneratedImage
 
 logger = logging.getLogger(__name__)
 
@@ -55,8 +57,36 @@ class StoryUpdateScheduler:
             if new_story:
                 logger.info(f"Successfully generated story version {new_story.id}")
 
-                # Step 3: Broadcast to WebSocket clients
-                logger.info("Step 3: Broadcasting to WebSocket clients")
+                # Step 3: Check if we should generate an image
+                if settings.singl_image_generation_enabled:
+                    story_count = service.get_story_count()
+                    if story_count % settings.singl_image_generation_interval == 0:
+                        logger.info("Step 3a: Generating AI image for story")
+                        try:
+                            image_gen = ImageGenerator()
+                            image_data = image_gen.generate_image_from_story(
+                                new_story.full_text,
+                                new_story.summary
+                            )
+
+                            # Save image to database
+                            generated_image = GeneratedImage(
+                                story_version_id=new_story.id,
+                                prompt=image_data["prompt"],
+                                image_url=image_data["image_url"],
+                                revised_prompt=image_data.get("revised_prompt"),
+                                model=settings.singl_image_model,
+                                size=settings.singl_image_size,
+                                quality=settings.singl_image_quality,
+                            )
+                            db.add(generated_image)
+                            db.commit()
+                            logger.info(f"Image saved with ID {generated_image.id}")
+                        except Exception as e:
+                            logger.error(f"Error generating image: {e}", exc_info=True)
+
+                # Step 4: Broadcast to WebSocket clients
+                logger.info("Step 4: Broadcasting to WebSocket clients")
                 manager = get_connection_manager()
 
                 # Convert to response schema

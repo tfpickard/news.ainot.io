@@ -3,8 +3,21 @@
 	import { api, type StoryVersion, type StoryVersionSummary } from '$lib/api';
 	import { wsClient } from '$lib/ws';
 
+	interface GeneratedImage {
+		id: number;
+		created_at: string;
+		story_version_id: number;
+		prompt: string;
+		image_url: string;
+		revised_prompt: string | null;
+		model: string;
+		size: string;
+		quality: string;
+	}
+
 	let currentStory: StoryVersion | null = null;
 	let historyStories: StoryVersionSummary[] = [];
+	let latestImage: GeneratedImage | null = null;
 	let loading = true;
 	let error: string | null = null;
 	let hasNewUpdate = false;
@@ -43,6 +56,17 @@
 		try {
 			currentStory = await api.getCurrentStory();
 			historyStories = await api.getStoryHistory(10, 0);
+
+			// Load latest image
+			try {
+				const imageResponse = await fetch('/api/images/latest');
+				if (imageResponse.ok) {
+					latestImage = await imageResponse.json();
+				}
+			} catch (e) {
+				console.log('No images available yet');
+			}
+
 			loading = false;
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to load story';
@@ -157,6 +181,19 @@
 						{@html currentStory.full_text.replace(/\n\n/g, '</p><p>').replace(/^(.*)$/, '<p>$1</p>')}
 					</div>
 				</article>
+
+				<!-- Latest AI-Generated Image -->
+				{#if latestImage}
+					<div class="generated-image-section">
+						<h2 class="image-section-title">Visual Interpretation</h2>
+						<div class="image-container">
+							<img src={latestImage.image_url} alt="AI-generated visualization of the story" class="story-image" />
+							<p class="image-caption">
+								AI-generated visualization • {formatDate(latestImage.created_at)}
+							</p>
+						</div>
+					</div>
+				{/if}
 			{/if}
 
 			<!-- History -->
@@ -370,5 +407,45 @@
 		align-items: center;
 		gap: var(--spacing-xs);
 		cursor: pointer;
+	}
+
+	/* Generated Image Section */
+	.generated-image-section {
+		margin-top: var(--spacing-xl);
+		padding-top: var(--spacing-xl);
+		border-top: 2px solid var(--color-border);
+	}
+
+	.image-section-title {
+		font-size: 1.25rem;
+		font-family: var(--font-sans);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		color: var(--color-text-light);
+		margin-bottom: var(--spacing-md);
+		text-align: center;
+	}
+
+	.image-container {
+		background: var(--color-highlight);
+		border: 1px solid var(--color-border);
+		border-radius: 8px;
+		overflow: hidden;
+		max-width: 100%;
+	}
+
+	.story-image {
+		width: 100%;
+		height: auto;
+		display: block;
+	}
+
+	.image-caption {
+		font-family: var(--font-sans);
+		font-size: 0.85rem;
+		color: var(--color-text-light);
+		text-align: center;
+		padding: var(--spacing-sm);
+		font-style: italic;
 	}
 </style>

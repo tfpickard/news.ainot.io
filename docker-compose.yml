@@ -36,6 +36,14 @@ services:
       SINGL_FEEDS: ${SINGL_FEEDS:-http://rss.cnn.com/rss/cnn_topstories.rss,http://feeds.bbci.co.uk/news/world/rss.xml,https://www.theguardian.com/world/rss,https://rss.nytimes.com/services/xml/rss/nyt/World.xml,http://feeds.reuters.com/reuters/topNews}
       SINGL_LOG_LEVEL: ${SINGL_LOG_LEVEL:-INFO}
       SINGL_WS_ORIGIN: "*"
+      SINGL_ADMIN_PASSWORD: ${SINGL_ADMIN_PASSWORD:-admin123}
+      SINGL_IMAGE_GENERATION_ENABLED: ${SINGL_IMAGE_GENERATION_ENABLED:-true}
+      SINGL_IMAGE_GENERATION_INTERVAL: ${SINGL_IMAGE_GENERATION_INTERVAL:-5}
+      SINGL_IMAGE_MODEL: ${SINGL_IMAGE_MODEL:-dall-e-3}
+      SINGL_IMAGE_SIZE: ${SINGL_IMAGE_SIZE:-1024x1024}
+      SINGL_IMAGE_QUALITY: ${SINGL_IMAGE_QUALITY:-standard}
+      SINGL_TEMPERATURE: ${SINGL_TEMPERATURE:-0.8}
+      SINGL_MAX_TOKENS: ${SINGL_MAX_TOKENS:-4000}
     ports:
       - "8001:8000"
     depends_on:
