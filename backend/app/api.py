@@ -14,7 +14,7 @@ from .database import get_db
 from .story_service import StoryService
 from .quote_service import QuoteExtractor
 from .image_service import QuoteImageGenerator
-from .models import FeedItem, FeedConfiguration, StoryVersion
+from .models import FeedItem, FeedConfiguration, StoryVersion, GeneratedImage
 from .schemas import (
     StoryVersionResponse,
     StoryVersionSummary,
@@ -31,6 +31,12 @@ from .schemas import (
     FeedConfigurationUpdate,
     LoginRequest,
     LoginResponse,
+    GeneratedImageResponse,
+    StatsResponse,
+    ControlPanelAuthRequest,
+    ControlPanelAuthResponse,
+    ConfigUpdateRequest,
+    ConfigResponse,
 )
 from .config import settings
 from .auth import require_auth, get_admin_api_key
@@ -622,8 +628,8 @@ def import_default_feeds(db: Session = Depends(get_db), auth: str = Depends(requ
     }
 
 
-@router.get("/stats")
-def get_stats(db: Session = Depends(get_db), auth: str = Depends(require_auth)):
+@router.get("/admin/stats")
+def get_admin_stats(db: Session = Depends(get_db), auth: str = Depends(require_auth)):
     """Get comprehensive statistics about THE STORY."""
     from sqlalchemy import func, distinct
     from datetime import datetime, timedelta, timezone
