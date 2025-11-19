@@ -15,7 +15,9 @@
 			<nav class="nav">
 				<a href="/" class="nav-link" class:active={$page.url.pathname === '/'}>Live</a>
 				<a href="/history" class="nav-link" class:active={$page.url.pathname === '/history'}>Archive</a>
+				<a href="/stats" class="nav-link" class:active={$page.url.pathname === '/stats'}>Stats</a>
 				<a href="/about" class="nav-link" class:active={$page.url.pathname === '/about'}>About</a>
+				<a href="/control-panel" class="nav-link" class:active={$page.url.pathname === '/control-panel'}>Control</a>
 			</nav>
 			<h1 class="site-title">
 				<a href="/">{SITE_NAME}</a>

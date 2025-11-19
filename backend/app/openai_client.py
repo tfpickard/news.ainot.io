@@ -50,8 +50,8 @@ class StoryGenerator:
                         {"role": "system", "content": system_message},
                         {"role": "user", "content": user_message},
                     ],
-                    # temperature=0.8,
-                    max_completion_tokens=4000,
+                    # temperature=settings.singl_temperature,
+                    max_completion_tokens=settings.singl_max_tokens,
                 )
             else:
                 response = self.client.chat.completions.create(
@@ -60,8 +60,8 @@ class StoryGenerator:
                         {"role": "system", "content": system_message},
                         {"role": "user", "content": user_message},
                     ],
-                    temperature=0.8,
-                    max_tokens=4000,
+                    temperature=settings.singl_temperature,
+                    max_tokens=settings.singl_max_tokens,
                 )
 
             story_text = response.choices[0].message.content.strip()
@@ -220,3 +220,106 @@ Continue the narrative with absolute journalistic authority, as if this total co
             logger.error(f"Error generating context summary: {e}")
             # Fallback: just truncate
             return combined[:2000]
+
+
+class ImageGenerator:
+    """Wrapper for OpenAI DALL-E API to generate images inspired by the story."""
+
+    def __init__(self):
+        self.client = OpenAI(api_key=settings.openai_api_key)
+        self.model = settings.singl_image_model
+        self.size = settings.singl_image_size
+        self.quality = settings.singl_image_quality
+
+    def generate_image_from_story(self, story_text: str, story_summary: str) -> Dict[str, Any]:
+        """
+        Generate an image inspired by the current news story.
+
+        Args:
+            story_text: The full story text
+            story_summary: Brief summary of the story
+
+        Returns:
+            Dict containing:
+                - image_url: URL of the generated image
+                - prompt: The prompt used
+                - revised_prompt: OpenAI's revised prompt (if available)
+        """
+        try:
+            # Create a prompt that captures the essence of the story
+            prompt = self._build_image_prompt(story_text, story_summary)
+
+            logger.info(f"Generating image with DALL-E. Prompt: {prompt[:100]}...")
+
+            response = self.client.images.generate(
+                model=self.model,
+                prompt=prompt,
+                size=self.size,
+                quality=self.quality,
+                n=1,
+            )
+
+            image_url = response.data[0].url
+            revised_prompt = getattr(response.data[0], 'revised_prompt', None)
+
+            logger.info(f"Image generated successfully: {image_url}")
+
+            return {
+                "image_url": image_url,
+                "prompt": prompt,
+                "revised_prompt": revised_prompt,
+            }
+
+        except Exception as e:
+            logger.error(f"Error generating image: {e}", exc_info=True)
+            raise
+
+    def _build_image_prompt(self, story_text: str, story_summary: str) -> str:
+        """
+        Build a DALL-E prompt from the story.
+
+        We'll use GPT to create an artistic prompt based on the story.
+        """
+        try:
+            # Use GPT to create a visual prompt
+            system_message = """You are an art director creating visual prompts for surrealist news imagery.
+
+Given a news story summary, create a vivid, artistic image prompt that captures its essence in a single surreal scene.
+The prompt should be:
+- Visually striking and memorable
+- Surreal but coherent
+- Evocative of the story's themes
+- Suitable for DALL-E 3 generation
+- 1-2 sentences max
+
+Do not include text, words, or letters in the image. Focus on visual metaphors and symbolic imagery."""
+
+            user_message = f"Create a surreal image prompt for this news story:\n\n{story_summary[:500]}"
+
+            if "gpt-5" in settings.singl_model_name:
+                response = self.client.chat.completions.create(
+                    model=settings.singl_model_name,
+                    messages=[
+                        {"role": "system", "content": system_message},
+                        {"role": "user", "content": user_message},
+                    ],
+                    max_completion_tokens=150,
+                )
+            else:
+                response = self.client.chat.completions.create(
+                    model=settings.singl_model_name,
+                    messages=[
+                        {"role": "system", "content": system_message},
+                        {"role": "user", "content": user_message},
+                    ],
+                    temperature=0.9,  # High creativity for visual prompts
+                    max_tokens=150,
+                )
+
+            prompt = response.choices[0].message.content.strip()
+            return prompt
+
+        except Exception as e:
+            logger.error(f"Error building image prompt: {e}")
+            # Fallback to simple prompt
+            return f"A surreal artistic representation of: {story_summary[:200]}"

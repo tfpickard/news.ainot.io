@@ -68,6 +68,20 @@ class Settings(BaseSettings):
     # WebSocket
     singl_ws_origin: str = "*"
 
+    # Control Panel
+    singl_admin_password: str
+
+    # Image Generation
+    singl_image_generation_enabled: bool = True
+    singl_image_generation_interval: int = 5
+    singl_image_model: str = "dall-e-3"
+    singl_image_size: str = "1024x1024"
+    singl_image_quality: str = "standard"
+
+    # Fine-tuning Controls
+    singl_temperature: float = 0.8
+    singl_max_tokens: int = 4000
+
     # App
     app_name: str = "Singl News Backend"
 
