@@ -36,7 +36,7 @@ class WebSocketClient {
 			this.ws.onmessage = (event) => {
 				try {
 					const data = JSON.parse(event.data);
-					if (data.type === 'story_update' && data.story) {
+					if ((data.type === 'initial' || data.type === 'update') && data.story) {
 						this.latestStory.set(data.story);
 						this.hasNewUpdate.set(true);
 					}
