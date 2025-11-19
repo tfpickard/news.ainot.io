@@ -4,9 +4,9 @@ import json
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 from sqlalchemy.orm import Session
+from openai import OpenAI
 
 from .models import StoryVersion, StoryAnalytics, FeedItem
-from .openai_client import get_openai_client
 from .config import settings
 
 logger = logging.getLogger(__name__)
@@ -17,7 +17,7 @@ class AnalyticsService:
 
     def __init__(self, db: Session):
         self.db = db
-        self.client = get_openai_client()
+        self.client = OpenAI(api_key=settings.openai_api_key)
 
     def analyze_story(self, story: StoryVersion) -> Optional[StoryAnalytics]:
         """
