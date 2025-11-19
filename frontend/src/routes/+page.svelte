@@ -140,14 +140,12 @@
 		}
 
 		try {
-			// Load analytics for this story
+			// Load analytics for this story (generates automatically if not found)
 			const analyticsResponse = await fetch(`/api/story/${story.id}/analytics`);
 			if (analyticsResponse.ok) {
 				analytics = await analyticsResponse.json();
-			} else {
-				// Trigger analytics generation in background
-				fetch(`/api/story/${story.id}/analyze`, { method: 'POST' }).catch(() => {});
 			}
+			// Note: analytics may be null if generation failed, but that's okay
 		} catch (e) {
 			console.log(`No analytics for story ${story.id}`);
 		}

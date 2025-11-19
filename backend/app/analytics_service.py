@@ -4,6 +4,7 @@ import json
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from openai import OpenAI
 
 from .models import StoryVersion, StoryAnalytics, FeedItem
@@ -66,11 +67,24 @@ class AnalyticsService:
             )
 
             self.db.add(analytics)
-            self.db.commit()
-            self.db.refresh(analytics)
 
-            logger.info(f"Successfully created analytics for story {story.id}")
-            return analytics
+            try:
+                self.db.commit()
+                self.db.refresh(analytics)
+                logger.info(f"Successfully created analytics for story {story.id}")
+                return analytics
+            except IntegrityError as ie:
+                # Race condition: another request already created analytics for this story
+                logger.warning(f"Analytics already exist for story {story.id} (race condition)")
+                self.db.rollback()
+
+                # Fetch and return the existing analytics
+                existing = (
+                    self.db.query(StoryAnalytics)
+                    .filter(StoryAnalytics.story_version_id == story.id)
+                    .first()
+                )
+                return existing
 
         except Exception as e:
             logger.error(f"Failed to analyze story {story.id}: {e}", exc_info=True)
