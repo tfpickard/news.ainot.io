@@ -41,39 +41,35 @@ class StoryGenerator:
         )
 
         try:
-            logger.info("Calling OpenAI API for story generation")
+            logger.info("Calling OpenAI Responses API for story generation")
 
             if "gpt-5" in self.model:
-                response = self.client.chat.completions.create(
+                response = self.client.responses.create(
                     model=self.model,
-                    messages=[
-                        {"role": "system", "content": system_message},
-                        {"role": "user", "content": user_message},
-                    ],
-                    # temperature=settings.singl_temperature,
+                    instructions=system_message,
+                    input=user_message,
                     max_completion_tokens=settings.singl_max_tokens,
                 )
             else:
-                response = self.client.chat.completions.create(
+                response = self.client.responses.create(
                     model=self.model,
-                    messages=[
-                        {"role": "system", "content": system_message},
-                        {"role": "user", "content": user_message},
-                    ],
+                    instructions=system_message,
+                    input=user_message,
                     temperature=settings.singl_temperature,
-                    max_tokens=settings.singl_max_tokens,
+                    max_completion_tokens=settings.singl_max_tokens,
                 )
 
-            story_text = response.choices[0].message.content.strip()
+            story_text = response.output_text.strip()
 
             # Generate summary
             summary = self._generate_summary(story_text)
 
             # Extract usage stats
+            # Responses API uses the same usage structure
             usage = {
-                "prompt_tokens": response.usage.prompt_tokens,
-                "completion_tokens": response.usage.completion_tokens,
-                "total_tokens": response.usage.total_tokens,
+                "prompt_tokens": response.usage.prompt_tokens if hasattr(response, 'usage') else 0,
+                "completion_tokens": response.usage.completion_tokens if hasattr(response, 'usage') else 0,
+                "total_tokens": response.usage.total_tokens if hasattr(response, 'usage') else 0,
             }
 
             logger.info(
@@ -143,33 +139,22 @@ Continue the narrative with absolute journalistic authority, as if this total co
         """Generate a brief summary of the story text."""
         try:
             if "gpt-5" in self.model:
-                response = self.client.chat.completions.create(
+                response = self.client.responses.create(
                     model=self.model,
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": "Generate a one-sentence summary of this news coverage that captures its essence:",
-                        },
-                        {"role": "user", "content": story_text[:2000]},  # Limit input
-                    ],
-                    # temperature=0.5,
+                    instructions="Generate a one-sentence summary of this news coverage that captures its essence:",
+                    input=story_text[:2000],  # Limit input
                     max_completion_tokens=100,
                 )
             else:
-                response = self.client.chat.completions.create(
+                response = self.client.responses.create(
                     model=self.model,
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": "Generate a one-sentence summary of this news coverage that captures its essence:",
-                        },
-                        {"role": "user", "content": story_text[:2000]},  # Limit input
-                    ],
+                    instructions="Generate a one-sentence summary of this news coverage that captures its essence:",
+                    input=story_text[:2000],  # Limit input
                     temperature=0.5,
-                    max_tokens=100,
+                    max_completion_tokens=100,
                 )
 
-            return response.choices[0].message.content.strip()
+            return response.output_text.strip()
 
         except Exception as e:
             logger.error(f"Error generating summary: {e}")
@@ -189,32 +174,21 @@ Continue the narrative with absolute journalistic authority, as if this total co
 
         try:
             if "gpt-5" in self.model:
-                response = self.client.chat.completions.create(
+                response = self.client.responses.create(
                     model=self.model,
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": "Condense this narrative into a coherent summary that preserves key plot points, characters, themes, and the overall arc. Maintain continuity.",
-                        },
-                        {"role": "user", "content": combined[:8000]},  # Token limit
-                    ],
-                    # temperature=0.5,
+                    instructions="Condense this narrative into a coherent summary that preserves key plot points, characters, themes, and the overall arc. Maintain continuity.",
+                    input=combined[:8000],  # Token limit
                     max_completion_tokens=1000,
                 )
             else:
-                response = self.client.chat.completions.create(
+                response = self.client.responses.create(
                     model=self.model,
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": "Condense this narrative into a coherent summary that preserves key plot points, characters, themes, and the overall arc. Maintain continuity.",
-                        },
-                        {"role": "user", "content": combined[:8000]},  # Token limit
-                    ],
+                    instructions="Condense this narrative into a coherent summary that preserves key plot points, characters, themes, and the overall arc. Maintain continuity.",
+                    input=combined[:8000],  # Token limit
                     temperature=0.5,
-                    max_tokens=1000,
+                    max_completion_tokens=1000,
                 )
-            return response.choices[0].message.content.strip()
+            return response.output_text.strip()
 
         except Exception as e:
             logger.error(f"Error generating context summary: {e}")
@@ -297,26 +271,22 @@ Do not include text, words, or letters in the image. Focus on visual metaphors a
             user_message = f"Create a surreal image prompt for this news story:\n\n{story_summary[:500]}"
 
             if "gpt-5" in settings.singl_model_name:
-                response = self.client.chat.completions.create(
+                response = self.client.responses.create(
                     model=settings.singl_model_name,
-                    messages=[
-                        {"role": "system", "content": system_message},
-                        {"role": "user", "content": user_message},
-                    ],
+                    instructions=system_message,
+                    input=user_message,
                     max_completion_tokens=150,
                 )
             else:
-                response = self.client.chat.completions.create(
+                response = self.client.responses.create(
                     model=settings.singl_model_name,
-                    messages=[
-                        {"role": "system", "content": system_message},
-                        {"role": "user", "content": user_message},
-                    ],
+                    instructions=system_message,
+                    input=user_message,
                     temperature=0.9,  # High creativity for visual prompts
-                    max_tokens=150,
+                    max_completion_tokens=150,
                 )
 
-            prompt = response.choices[0].message.content.strip()
+            prompt = response.output_text.strip()
             return prompt
 
         except Exception as e:

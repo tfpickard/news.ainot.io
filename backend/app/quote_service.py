@@ -53,15 +53,15 @@ Return JSON array with format:
 Prioritize quotes that would make someone do a double-take on social media.
 """
 
-            response = self.story_generator.client.chat.completions.create(
-                model=self.story_generator.model_name,
-                messages=[{"role": "user", "content": prompt}],
+            response = self.story_generator.client.responses.create(
+                model=self.story_generator.model,
+                input=prompt,
                 temperature=0.7,
-                response_format={"type": "json_object"},
+                text={"format": {"type": "json_object"}},
             )
 
             import json
-            result = json.loads(response.choices[0].message.content)
+            result = json.loads(response.output_text)
 
             # Handle both array and object responses
             if isinstance(result, dict) and "quotes" in result:
