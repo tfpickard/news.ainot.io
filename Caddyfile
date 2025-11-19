@@ -1,5 +1,4 @@
-# Caddy configuration for Singl News
-# Domains: news.ainot.io, singl.news, hurl.lol
+# Caddy configuration for Singl News and Eternal Stories
 # Place this file in /etc/caddy/Caddyfile
 
 # Caddy automatically:
@@ -8,7 +7,8 @@
 # - Enables HTTP/2 and HTTP/3
 # - Adds security headers
 
-news.ainot.io, singl.news, hurl.lol, www.hurl.lol {
+# Singl News - new domains on ports 4001/8001
+news.ainot.io, singl.news {
     # Email for Let's Encrypt notifications
     # Set this via environment variable or command line:
     # caddy run --email your@email.com
@@ -29,7 +29,7 @@ news.ainot.io, singl.news, hurl.lol, www.hurl.lol {
 
     # Logging
     log {
-        output file /var/log/caddy/access.log
+        output file /var/log/caddy/singl-access.log
         format json
     }
 
@@ -72,6 +72,79 @@ news.ainot.io, singl.news, hurl.lol, www.hurl.lol {
     # Frontend application (everything else)
     handle {
         reverse_proxy localhost:4001 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+}
+
+# Eternal Stories at hurl.lol - original ports 4000/8000
+hurl.lol, www.hurl.lol {
+    # Email for Let's Encrypt notifications
+    # Set this via environment variable or command line:
+    # caddy run --email your@email.com
+
+    # Security headers
+    header {
+        # HSTS
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        # Prevent clickjacking
+        X-Frame-Options "SAMEORIGIN"
+        # Prevent MIME sniffing
+        X-Content-Type-Options "nosniff"
+        # XSS protection
+        X-XSS-Protection "1; mode=block"
+        # Remove server header
+        -Server
+    }
+
+    # Logging
+    log {
+        output file /var/log/caddy/hurl-access.log
+        format json
+    }
+
+    # WebSocket endpoint - must be first to match before /api/
+    handle /ws/* {
+        reverse_proxy localhost:8000 {
+            # WebSocket configuration
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    # API endpoints
+    handle /api/* {
+        reverse_proxy localhost:8000 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    # Auth endpoints
+    handle /auth/* {
+        reverse_proxy localhost:8000 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    # Health check endpoint (for monitoring)
+    handle /health {
+        respond "OK" 200
+    }
+
+    # Frontend application (everything else)
+    handle {
+        reverse_proxy localhost:4000 {
             header_up Host {host}
             header_up X-Real-IP {remote_host}
             header_up X-Forwarded-For {remote_host}
