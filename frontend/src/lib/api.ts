@@ -24,6 +24,31 @@ export interface StoryVersionSummary {
 	preview: string;
 }
 
+export interface Quote {
+	text: string;
+	category: string;
+	absurdity_score: number;
+	keywords: string[];
+}
+
+export interface SourceDetail {
+	id: number;
+	title: string;
+	source: string;
+	published_at?: string;
+	link?: string;
+}
+
+export interface SEOMetadata {
+	title: string;
+	description: string;
+	keywords: string[];
+	og_title: string;
+	og_description: string;
+	og_type: string;
+	twitter_card: string;
+}
+
 class ApiClient {
 	private baseUrl: string;
 
@@ -53,6 +78,32 @@ class ApiClient {
 		const response = await fetch(`${this.baseUrl}/api/story/${id}`);
 		if (!response.ok) {
 			throw new Error('Failed to fetch story');
+		}
+		return response.json();
+	}
+
+	async getStoryQuotes(id: number, count: number = 5): Promise<Quote[]> {
+		const response = await fetch(`${this.baseUrl}/api/story/${id}/quotes?count=${count}`);
+		if (!response.ok) {
+			throw new Error('Failed to fetch quotes');
+		}
+		const data = await response.json();
+		return data.quotes;
+	}
+
+	async getStorySources(id: number): Promise<SourceDetail[]> {
+		const response = await fetch(`${this.baseUrl}/api/story/${id}/sources`);
+		if (!response.ok) {
+			throw new Error('Failed to fetch sources');
+		}
+		const data = await response.json();
+		return data.sources;
+	}
+
+	async getStorySEO(id: number): Promise<SEOMetadata> {
+		const response = await fetch(`${this.baseUrl}/api/story/${id}/seo`);
+		if (!response.ok) {
+			throw new Error('Failed to fetch SEO metadata');
 		}
 		return response.json();
 	}

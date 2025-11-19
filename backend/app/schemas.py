@@ -87,3 +87,52 @@ class WebSocketMessage(BaseModel):
     """Schema for WebSocket messages."""
     type: str  # "initial" or "update"
     story: StoryVersionResponse
+
+
+class QuoteResponse(BaseModel):
+    """Schema for extracted quotes."""
+    text: str
+    category: str
+    absurdity_score: int
+    keywords: List[str]
+
+
+class QuotesResponse(BaseModel):
+    """Schema for multiple quotes from a story."""
+    story_id: int
+    quotes: List[QuoteResponse]
+
+
+class SourceDetail(BaseModel):
+    """Schema for detailed source information."""
+    id: int
+    title: str
+    source: str
+    published_at: Optional[str] = None
+    link: Optional[str] = None
+
+
+class SourcesResponse(BaseModel):
+    """Schema for story sources."""
+    story_id: int
+    item_count: int
+    sources: List[SourceDetail]
+
+
+class SEOMetadata(BaseModel):
+    """Schema for SEO metadata."""
+    title: str
+    description: str
+    keywords: List[str]
+    og_title: str
+    og_description: str
+    og_type: str = "article"
+    twitter_card: str = "summary_large_image"
+
+
+class APIDocumentation(BaseModel):
+    """Schema for API documentation."""
+    version: str
+    endpoints: List[Dict[str, Any]]
+    examples: List[Dict[str, Any]]
+    rate_limits: Dict[str, Any]

@@ -2,6 +2,7 @@
 	import '../app.css';
 	import { SITE_NAME } from '$lib/config';
 	import { page } from '$app/stores';
+	import NewsroomAmbience from '$lib/components/NewsroomAmbience.svelte';
 </script>
 
 <svelte:head>
@@ -16,6 +17,7 @@
 				<a href="/" class="nav-link" class:active={$page.url.pathname === '/'}>Live</a>
 				<a href="/history" class="nav-link" class:active={$page.url.pathname === '/history'}>Archive</a>
 				<a href="/about" class="nav-link" class:active={$page.url.pathname === '/about'}>About</a>
+				<a href="/api-docs" class="nav-link" class:active={$page.url.pathname === '/api-docs'}>API</a>
 			</nav>
 			<h1 class="site-title">
 				<a href="/">{SITE_NAME}</a>
@@ -38,6 +40,9 @@
 			</p>
 		</div>
 	</footer>
+
+	<!-- Newsroom Ambience Player -->
+	<NewsroomAmbience />
 </div>
 
 <style>

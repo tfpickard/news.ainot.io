@@ -1,9 +1,12 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
-	import { api, type StoryVersion } from '$lib/api';
+	import { api, type StoryVersion, type SEOMetadata } from '$lib/api';
+	import QuoteCard from '$lib/components/QuoteCard.svelte';
+	import SourceTracker from '$lib/components/SourceTracker.svelte';
 
 	let story: StoryVersion | null = null;
+	let seoData: SEOMetadata | null = null;
 	let loading = true;
 	let error: string | null = null;
 
@@ -11,7 +14,12 @@
 
 	onMount(async () => {
 		try {
-			story = await api.getStoryById(storyId);
+			const [storyData, seo] = await Promise.all([
+				api.getStoryById(storyId),
+				api.getStorySEO(storyId).catch(() => null)
+			]);
+			story = storyData;
+			seoData = seo;
 			loading = false;
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to load story';
@@ -31,10 +39,54 @@
 			timeZoneName: 'short'
 		});
 	}
+
+	$: pageUrl = `https://singl.news/story/${storyId}`;
 </script>
 
 <svelte:head>
-	<title>{story?.summary || 'Story'} - Singl News</title>
+	<title>{seoData?.title || story?.summary || 'Story'} - Singl News</title>
+
+	{#if seoData}
+		<!-- SEO Meta Tags -->
+		<meta name="description" content={seoData.description} />
+		<meta name="keywords" content={seoData.keywords.join(', ')} />
+
+		<!-- Open Graph / Facebook -->
+		<meta property="og:type" content={seoData.og_type} />
+		<meta property="og:url" content={pageUrl} />
+		<meta property="og:title" content={seoData.og_title} />
+		<meta property="og:description" content={seoData.og_description} />
+		<meta property="og:site_name" content="Singl News" />
+
+		<!-- Twitter -->
+		<meta name="twitter:card" content={seoData.twitter_card} />
+		<meta name="twitter:url" content={pageUrl} />
+		<meta name="twitter:title" content={seoData.og_title} />
+		<meta name="twitter:description" content={seoData.og_description} />
+
+		<!-- Schema.org JSON-LD -->
+		<script type="application/ld+json">
+			{JSON.stringify({
+				'@context': 'https://schema.org',
+				'@type': 'NewsArticle',
+				headline: seoData.og_title,
+				description: seoData.description,
+				datePublished: story?.created_at,
+				author: {
+					'@type': 'Organization',
+					name: 'Global Continuity Desk',
+					url: 'https://singl.news'
+				},
+				publisher: {
+					'@type': 'Organization',
+					name: 'Singl News',
+					url: 'https://singl.news'
+				},
+				url: pageUrl,
+				keywords: seoData.keywords.join(', ')
+			})}
+		</script>
+	{/if}
 </svelte:head>
 
 <div class="page">
@@ -61,14 +113,11 @@
 					{@html story.full_text.replace(/\n\n/g, '</p><p>').replace(/^(.*)$/, '<p>$1</p>')}
 				</div>
 
-				{#if story.sources_snapshot?.feed_items?.length > 0}
-					<aside class="sources">
-						<h3>Sources Referenced</h3>
-						<p class="source-count">
-							{story.sources_snapshot.item_count} information source{story.sources_snapshot.item_count !== 1 ? 's' : ''} incorporated
-						</p>
-					</aside>
-				{/if}
+				<!-- Quote Cards for Sharing -->
+				<QuoteCard storyId={story.id} showCount={3} />
+
+				<!-- Enhanced Source Tracker -->
+				<SourceTracker storyId={story.id} />
 			</article>
 
 			<div class="story-footer">
@@ -127,27 +176,6 @@
 	.story-content :global(p) {
 		margin-bottom: var(--spacing-md);
 		text-align: justify;
-	}
-
-	.sources {
-		margin-top: var(--spacing-xl);
-		padding: var(--spacing-md);
-		background: var(--color-highlight);
-		border-left: 3px solid var(--color-text-light);
-	}
-
-	.sources h3 {
-		font-family: var(--font-sans);
-		font-size: 0.875rem;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		margin-bottom: var(--spacing-xs);
-	}
-
-	.source-count {
-		font-family: var(--font-sans);
-		font-size: 0.875rem;
-		color: var(--color-text-light);
 	}
 
 	.story-footer {
