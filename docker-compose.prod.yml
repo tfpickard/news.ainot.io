@@ -43,7 +43,7 @@ services:
       SINGL_LOG_LEVEL: ${SINGL_LOG_LEVEL:-WARNING}
       SINGL_WS_ORIGIN: ${SINGL_WS_ORIGIN}
     ports:
-      - "${BACKEND_PORT:-8000}:8000"
+      - "${BACKEND_PORT:-8001}:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -68,7 +68,7 @@ services:
       ORIGIN: ${ORIGIN}
       NODE_ENV: production
     ports:
-      - "${FRONTEND_PORT:-3000}:3000"
+      - "${FRONTEND_PORT:-4001}:3000"
     depends_on:
       - backend
     networks:
