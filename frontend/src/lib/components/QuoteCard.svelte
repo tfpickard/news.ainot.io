@@ -52,7 +52,7 @@
 
 	function copyToClipboard() {
 		if (selectedQuote) {
-			const text = `"${selectedQuote.text}"\n\nFrom THE STORY at Singl News\nhttps://singl.news/story/${storyId}`;
+			const text = `"${selectedQuote.text}"\n\nFrom THE STORY at UnioNews\nhttps://singl.news/story/${storyId}`;
 			navigator.clipboard.writeText(text).then(() => {
 				alert('Quote copied to clipboard!');
 			});

@@ -75,7 +75,7 @@
 			description: 'Get SEO metadata for a story',
 			example: `${API_BASE}/api/story/123/seo`,
 			response: {
-				title: 'Story title - Singl News',
+				title: 'Story title - UnioNews',
 				description: 'Story description...',
 				keywords: ['keyword1', 'keyword2'],
 				og_title: 'Story title',
@@ -91,10 +91,10 @@
 </script>
 
 <svelte:head>
-	<title>API Documentation - Singl News</title>
+	<title>API Documentation - UnioNews</title>
 	<meta
 		name="description"
-		content="Developer API for Singl News - Access THE STORY programmatically"
+		content="Developer API for UnioNews - Access THE STORY programmatically"
 	/>
 </svelte:head>
 
@@ -111,7 +111,7 @@
 		<section class="getting-started">
 			<h2>Getting Started</h2>
 			<p>
-				The Singl News API is free to use. All endpoints return JSON and require no
+				The UnioNews API is free to use. All endpoints return JSON and require no
 				authentication.
 			</p>
 
@@ -130,7 +130,7 @@
 
 			<div class="info-box">
 				<h3>Attribution</h3>
-				<p>Please include "Powered by Singl News" when using this API in your projects.</p>
+				<p>Please include "Powered by UnioNews" when using this API in your projects.</p>
 			</div>
 		</section>
 
@@ -258,7 +258,7 @@ curl https://singl.news/api/story/123/quotes | jq '.quotes[].text'`}</pre>
 			</p>
 			<div class="support-links">
 				<a href="/" class="support-link">← Back to THE STORY</a>
-				<a href="/about" class="support-link">About Singl News</a>
+				<a href="/about" class="support-link">About UnioNews</a>
 			</div>
 		</section>
 	</div>

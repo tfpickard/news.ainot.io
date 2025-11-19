@@ -25,7 +25,7 @@ async def lifespan(app: FastAPI):
     Lifespan context manager for startup and shutdown events.
     """
     # Startup
-    logger.info("Starting Singl News Backend")
+    logger.info("Starting UnioNews Backend")
 
     # Initialize database
     logger.info("Initializing database")
@@ -36,12 +36,12 @@ async def lifespan(app: FastAPI):
     scheduler = get_scheduler()
     scheduler.start()
 
-    logger.info("Singl News Backend started successfully")
+    logger.info("UnioNews Backend started successfully")
 
     yield
 
     # Shutdown
-    logger.info("Shutting down Singl News Backend")
+    logger.info("Shutting down UnioNews Backend")
     scheduler.shutdown()
     logger.info("Shutdown complete")
 
@@ -49,7 +49,7 @@ async def lifespan(app: FastAPI):
 # Create FastAPI app
 app = FastAPI(
     title=settings.app_name,
-    description="Backend for Singl News - The world's only unified continuous news story",
+    description="Backend for UnioNews - The Singular, Unified, Authoritative and Eternal Narrative",
     version="1.0.0",
     lifespan=lifespan,
 )
@@ -79,7 +79,7 @@ async def websocket_story_endpoint(websocket: WebSocket):
 def root():
     """Root endpoint."""
     return {
-        "service": "Singl News Backend",
+        "service": "UnioNews Backend",
         "version": "1.0.0",
         "status": "operational",
     }

@@ -44,7 +44,7 @@
 </script>
 
 <svelte:head>
-	<title>{seoData?.title || story?.summary || 'Story'} - Singl News</title>
+	<title>{seoData?.title || story?.summary || 'Story'} - UnioNews</title>
 
 	{#if seoData}
 		<!-- SEO Meta Tags -->
@@ -56,7 +56,7 @@
 		<meta property="og:url" content={pageUrl} />
 		<meta property="og:title" content={seoData.og_title} />
 		<meta property="og:description" content={seoData.og_description} />
-		<meta property="og:site_name" content="Singl News" />
+		<meta property="og:site_name" content="UnioNews" />
 
 		<!-- Twitter -->
 		<meta name="twitter:card" content={seoData.twitter_card} />
@@ -79,7 +79,7 @@
 				},
 				publisher: {
 					'@type': 'Organization',
-					name: 'Singl News',
+					name: 'UnioNews',
 					url: 'https://singl.news'
 				},
 				url: pageUrl,

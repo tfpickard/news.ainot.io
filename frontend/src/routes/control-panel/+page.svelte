@@ -163,7 +163,7 @@
 </script>
 
 <svelte:head>
-	<title>Control Panel - Singl News</title>
+	<title>Control Panel - UnioNews</title>
 </svelte:head>
 
 <div class="page">

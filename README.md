@@ -1,12 +1,12 @@
-# Singl News
+# UnioNews
 
-**The world's only unified continuous news story.**
+**The Singular, Unified, Authoritative and Eternal Narrative that's neither fit nor unfit to print**
 
-Singl News presents a single, perpetually evolving narrative constructed from multiple real RSS news feeds. Instead of fragmenting reality into discrete articles, it recognizes that all events are interconnected threads in one continuous story.
+UnioNews presents a single, perpetually evolving narrative constructed from multiple real RSS news feeds. Instead of fragmenting reality into discrete articles, it recognizes that all events are interconnected threads in one continuous story.
 
 ## 🌐 Domains
 
-- **Primary**: `singl.news`
+- **Primary**: `singl.news` (serves UnioNews)
 - **Mirror**: `news.ainot.io`
 
 ## 🎯 Concept

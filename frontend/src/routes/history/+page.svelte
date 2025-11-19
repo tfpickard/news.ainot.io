@@ -69,7 +69,7 @@
 </script>
 
 <svelte:head>
-	<title>Archive - Singl News</title>
+	<title>Archive - UnioNews</title>
 </svelte:head>
 
 <div class="page">

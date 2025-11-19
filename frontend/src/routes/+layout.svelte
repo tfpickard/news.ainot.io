@@ -28,7 +28,7 @@
 			<h1 class="site-title">
 				<a href="/">{SITE_NAME}</a>
 			</h1>
-			<p class="site-tagline">Global Continuity Desk</p>
+			<p class="site-tagline">The Singular, Unified, Authoritative and Eternal Narrative that's neither fit nor unfit to print</p>
 		</div>
 	</header>
 

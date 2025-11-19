@@ -232,7 +232,7 @@
 </script>
 
 <svelte:head>
-	<title>Singl News - The Continuous Global Narrative</title>
+	<title>UnioNews - The Singular, Unified, Authoritative and Eternal Narrative</title>
 </svelte:head>
 
 <div class="page">
