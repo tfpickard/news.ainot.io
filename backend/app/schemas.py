@@ -167,6 +167,17 @@ class FeedConfigurationResponse(FeedConfigurationBase):
     created_at: datetime
     last_fetched: Optional[datetime] = None
     fetch_error: Optional[str] = None
+class GeneratedImageResponse(BaseModel):
+    """Schema for generated image responses."""
+    id: int
+    created_at: datetime
+    story_version_id: int
+    prompt: str
+    image_url: str
+    revised_prompt: Optional[str] = None
+    model: str
+    size: str
+    quality: str
 
     class Config:
         from_attributes = True
@@ -181,3 +192,58 @@ class LoginResponse(BaseModel):
     """Schema for login response."""
     api_key: str
     message: str
+class StatsResponse(BaseModel):
+    """Schema for public stats page."""
+    total_stories: int
+    total_images: int
+    total_feed_items: int
+    latest_story_at: Optional[datetime] = None
+    latest_image_at: Optional[datetime] = None
+    update_frequency_minutes: int
+    feeds_count: int
+    model_name: str
+    uptime_hours: float
+    stories_last_24h: int
+    images_last_24h: int
+
+
+class ControlPanelAuthRequest(BaseModel):
+    """Schema for control panel authentication."""
+    password: str
+
+
+class ControlPanelAuthResponse(BaseModel):
+    """Schema for authentication response."""
+    success: bool
+    message: str
+    token: Optional[str] = None
+
+
+class ConfigUpdateRequest(BaseModel):
+    """Schema for updating configuration."""
+    singl_model_name: Optional[str] = None
+    singl_update_minutes: Optional[int] = None
+    singl_context_steps: Optional[int] = None
+    singl_temperature: Optional[float] = None
+    singl_max_tokens: Optional[int] = None
+    singl_image_generation_enabled: Optional[bool] = None
+    singl_image_generation_interval: Optional[int] = None
+    singl_image_model: Optional[str] = None
+    singl_image_size: Optional[str] = None
+    singl_image_quality: Optional[str] = None
+    singl_feeds: Optional[str] = None
+
+
+class ConfigResponse(BaseModel):
+    """Schema for configuration response."""
+    singl_model_name: str
+    singl_update_minutes: int
+    singl_context_steps: int
+    singl_temperature: float
+    singl_max_tokens: int
+    singl_image_generation_enabled: bool
+    singl_image_generation_interval: int
+    singl_image_model: str
+    singl_image_size: str
+    singl_image_quality: str
+    feed_count: int

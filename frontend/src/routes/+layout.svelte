@@ -16,6 +16,7 @@
 			<nav class="nav">
 				<a href="/" class="nav-link" class:active={$page.url.pathname === '/'}>Live</a>
 				<a href="/history" class="nav-link" class:active={$page.url.pathname === '/history'}>Archive</a>
+				<a href="/stats" class="nav-link" class:active={$page.url.pathname === '/stats'}>Stats</a>
 				<a href="/about" class="nav-link" class:active={$page.url.pathname === '/about'}>About</a>
 				<a href="/api-docs" class="nav-link" class:active={$page.url.pathname === '/api-docs'}>API</a>
 				<a href="/stats" class="nav-link" class:active={$page.url.pathname === '/stats'}>Stats</a>

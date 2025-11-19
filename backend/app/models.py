@@ -63,3 +63,20 @@ class FeedConfiguration(Base):
 
     def __repr__(self):
         return f"<FeedConfiguration(id={self.id}, name='{self.name}', active={self.is_active})>"
+class GeneratedImage(Base):
+    """Represents an AI-generated image inspired by the news story."""
+
+    __tablename__ = "generated_images"
+
+    id = Column(Integer, primary_key=True, index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
+    story_version_id = Column(Integer, nullable=False, index=True)  # Associated story version
+    prompt = Column(Text, nullable=False)  # The prompt used to generate the image
+    image_url = Column(String, nullable=False)  # OpenAI image URL
+    revised_prompt = Column(Text)  # OpenAI's revised prompt (if available)
+    model = Column(String, nullable=False)  # Model used (e.g., dall-e-3)
+    size = Column(String, nullable=False)  # Image size (e.g., 1024x1024)
+    quality = Column(String, nullable=False)  # Quality setting (standard/hd)
+
+    def __repr__(self):
+        return f"<GeneratedImage(id={self.id}, story_version_id={self.story_version_id})>"
