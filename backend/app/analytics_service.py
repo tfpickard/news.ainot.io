@@ -76,15 +76,22 @@ class AnalyticsService:
             except IntegrityError as ie:
                 # Race condition: another request already created analytics for this story
                 logger.warning(f"Analytics already exist for story {story.id} (race condition)")
+                # Expunge the failed analytics object from session
+                self.db.expunge(analytics)
+                # Rollback to clear the failed transaction
                 self.db.rollback()
 
-                # Fetch and return the existing analytics
+                # Fetch and return the existing analytics in a new query
                 existing = (
                     self.db.query(StoryAnalytics)
                     .filter(StoryAnalytics.story_version_id == story.id)
                     .first()
                 )
-                return existing
+                if existing:
+                    return existing
+                else:
+                    logger.error(f"Could not find existing analytics for story {story.id} after race condition")
+                    return None
 
         except Exception as e:
             logger.error(f"Failed to analyze story {story.id}: {e}", exc_info=True)
@@ -108,7 +115,7 @@ Return your analysis as JSON with:
                     instructions=system_prompt,
                     input=user_prompt,
                     max_output_tokens=500,
-                    reasoning={"effort": "low"},
+                    reasoning={"effort": "minimal"},
                     text={"verbosity": "low"},
                 )
             else:
@@ -156,7 +163,7 @@ Return JSON with:
                     instructions=system_prompt,
                     input=user_prompt,
                     max_output_tokens=800,
-                    reasoning={"effort": "low"},
+                    reasoning={"effort": "minimal"},
                     text={"verbosity": "medium"},
                 )
             else:
@@ -249,7 +256,7 @@ Focus on verifiable facts, not opinions. Mark as "unverified" if you cannot dete
                     instructions=system_prompt,
                     input=user_prompt,
                     max_output_tokens=1500,
-                    reasoning={"effort": "medium"},
+                    reasoning={"effort": "minimal"},
                     text={"verbosity": "medium"},
                 )
             else:
@@ -291,7 +298,7 @@ Provide 3-5 diverse predictions ranging from likely to possible."""
                     instructions=system_prompt,
                     input=user_prompt,
                     max_output_tokens=1500,
-                    reasoning={"effort": "medium"},
+                    reasoning={"effort": "minimal"},
                     text={"verbosity": "medium"},
                 )
             else:
@@ -333,7 +340,7 @@ Extract 5-10 most important events."""
                     instructions=system_prompt,
                     input=user_prompt,
                     max_output_tokens=1200,
-                    reasoning={"effort": "low"},
+                    reasoning={"effort": "minimal"},
                     text={"verbosity": "medium"},
                 )
             else:

@@ -2,15 +2,15 @@
 
 GPT-5 Model Optimization:
 - Uses Responses API with reasoning and verbosity parameters
-- GPT-5 models (including gpt-5-mini, gpt-5.1) do NOT support temperature, top_p, or logprobs
+- GPT-5 models (including gpt-5-nano, gpt-5.1) do NOT support temperature, top_p, or logprobs
 - Instead uses: reasoning.effort (minimal/low/medium/high) and text.verbosity (low/medium/high)
-- Note: gpt-5-mini supports 'minimal' instead of 'none' for reasoning effort
+- Note: gpt-5-nano uses 'minimal' for reasoning effort (fastest, most cost-effective)
 - Reasoning effort is tuned per task:
-  * Story generation: low (configurable via settings)
+  * Story generation: minimal for gpt-5-nano (configurable via settings)
   * Summary generation: minimal (simple task, speed prioritized)
-  * Context summary: low (needs coherence)
-  * Image prompts: low (creative task)
-  * Quote extraction: low (needs to identify absurd juxtapositions)
+  * Context summary: minimal (needs coherence but keep costs low)
+  * Image prompts: minimal (creative task)
+  * Quote extraction: minimal (needs to identify absurd juxtapositions)
 - Usage stats: Responses API uses input_tokens/output_tokens instead of prompt_tokens/completion_tokens
 """
 
