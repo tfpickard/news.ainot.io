@@ -28,7 +28,7 @@ class Settings(BaseSettings):
         "https://www.aljazeera.com/xml/rss/all.xml,"
         # Technology & Science
         "https://techcrunch.com/feed/,"
-        "http://feeds.arstechnica.com/arstechnica/index,"
+        "http://feeds.arstechnica.com/arstechnica/index.xml,"
         "https://www.wired.com/feed/rss,"
         "https://www.sciencedaily.com/rss/all.xml,"
         "https://phys.org/rss-feed/,"
