@@ -1,5 +1,6 @@
 """Configuration management for Singl News backend."""
-from pydantic_settings import BaseSettings
+import os
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List
 
 
@@ -69,7 +70,7 @@ class Settings(BaseSettings):
     singl_ws_origin: str = "*"
 
     # Control Panel
-    singl_admin_password: str
+    singl_admin_password: str = "singl2025"
 
     # Image Generation
     singl_image_generation_enabled: bool = True
@@ -85,9 +86,12 @@ class Settings(BaseSettings):
     # App
     app_name: str = "Singl News Backend"
 
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+    )
 
     def get_feed_list(self) -> List[str]:
         """Parse comma-separated feed URLs into a list."""
@@ -96,3 +100,15 @@ class Settings(BaseSettings):
 
 # Global settings instance
 settings = Settings()
+
+# Debug logging for configuration (only shows on startup)
+print("=" * 80)
+print("🔧 SINGL NEWS CONFIGURATION LOADED")
+print("=" * 80)
+print(f"📊 Database: {settings.database_url.split('@')[1] if '@' in settings.database_url else 'configured'}")
+print(f"🤖 OpenAI Key: {'✓ SET (' + settings.openai_api_key[-4:] + ')' if settings.openai_api_key else '✗ NOT SET'}")
+print(f"🎨 Model: {settings.singl_model_name}")
+print(f"⏱️  Update Interval: {settings.singl_update_minutes} minutes")
+print(f"🔐 Admin Password: {'✓ SET' if settings.singl_admin_password else '✗ NOT SET'}")
+print(f"📡 Active Feeds: {len(settings.get_feed_list())}")
+print("=" * 80)
