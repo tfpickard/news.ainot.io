@@ -43,15 +43,26 @@ class StoryGenerator:
         try:
             logger.info("Calling OpenAI API for story generation")
 
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": system_message},
-                    {"role": "user", "content": user_message},
-                ],
-                # temperature=0.8,
-                max_completion_tokens=4000,
-            )
+            if "gpt-5" in self.model:
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": system_message},
+                        {"role": "user", "content": user_message},
+                    ],
+                    # temperature=0.8,
+                    max_completion_tokens=4000,
+                )
+            else:
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": system_message},
+                        {"role": "user", "content": user_message},
+                    ],
+                    temperature=0.8,
+                    max_tokens=4000,
+                )
 
             story_text = response.choices[0].message.content.strip()
 
@@ -119,18 +130,32 @@ Generate the next segment of THE STORY. Continue the narrative seamlessly while 
     def _generate_summary(self, story_text: str) -> str:
         """Generate a brief summary of the story text."""
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "Generate a one-sentence summary of this news coverage that captures its essence:",
-                    },
-                    {"role": "user", "content": story_text[:2000]},  # Limit input
-                ],
-                temperature=0.5,
-                max_tokens=100,
-            )
+            if "gpt-5" in self.model:
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "Generate a one-sentence summary of this news coverage that captures its essence:",
+                        },
+                        {"role": "user", "content": story_text[:2000]},  # Limit input
+                    ],
+                    # temperature=0.5,
+                    max_completion_tokens=100,
+                )
+            else:
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "Generate a one-sentence summary of this news coverage that captures its essence:",
+                        },
+                        {"role": "user", "content": story_text[:2000]},  # Limit input
+                    ],
+                    temperature=0.5,
+                    max_tokens=100,
+                )
 
             return response.choices[0].message.content.strip()
 
@@ -151,19 +176,32 @@ Generate the next segment of THE STORY. Continue the narrative seamlessly while 
         combined = "\n\n".join(story_texts)
 
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "Condense this narrative into a coherent summary that preserves key plot points, characters, themes, and the overall arc. Maintain continuity.",
-                    },
-                    {"role": "user", "content": combined[:8000]},  # Token limit
-                ],
-                temperature=0.5,
-                max_tokens=1000,
-            )
-
+            if "gpt-5" in self.model:
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "Condense this narrative into a coherent summary that preserves key plot points, characters, themes, and the overall arc. Maintain continuity.",
+                        },
+                        {"role": "user", "content": combined[:8000]},  # Token limit
+                    ],
+                    # temperature=0.5,
+                    max_completion_tokens=1000,
+                )
+            else:
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "Condense this narrative into a coherent summary that preserves key plot points, characters, themes, and the overall arc. Maintain continuity.",
+                        },
+                        {"role": "user", "content": combined[:8000]},  # Token limit
+                    ],
+                    temperature=0.5,
+                    max_tokens=1000,
+                )
             return response.choices[0].message.content.strip()
 
         except Exception as e:
