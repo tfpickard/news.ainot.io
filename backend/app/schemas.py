@@ -324,3 +324,175 @@ class StoryAnalyticsResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# Trend Analytics Schemas
+
+class TrendDataPoint(BaseModel):
+    """A single data point in a trend."""
+    timestamp: datetime
+    value: float
+    story_id: int
+    label: Optional[str] = None
+
+
+class SentimentTrendResponse(BaseModel):
+    """Schema for sentiment trends over time."""
+    positive_trend: List[TrendDataPoint]
+    negative_trend: List[TrendDataPoint]
+    neutral_trend: List[TrendDataPoint]
+    overall_trend: List[Dict[str, Any]]  # Combined sentiment by story
+
+
+class KeywordFrequency(BaseModel):
+    """A keyword with its frequency count."""
+    keyword: str
+    count: int
+    stories: List[int]  # Story IDs where this keyword appears
+
+
+class KeywordCloudResponse(BaseModel):
+    """Schema for keyword cloud data."""
+    keywords: List[KeywordFrequency]
+    total_keywords: int
+    date_range: Dict[str, datetime]
+
+
+class AbsurdityDataPoint(BaseModel):
+    """Absurdity score for a story."""
+    timestamp: datetime
+    story_id: int
+    absurdity_score: float
+    top_quote: Optional[str] = None
+
+
+class AbsurdityTrendResponse(BaseModel):
+    """Schema for absurdity trends over time."""
+    data_points: List[AbsurdityDataPoint]
+    average_score: float
+    peak_absurdity: AbsurdityDataPoint
+
+
+class SourceContribution(BaseModel):
+    """Source contribution metrics."""
+    source_name: str
+    story_count: int
+    article_count: int
+    avg_sentiment: float
+    categories: List[str]
+
+
+class SourceDominanceResponse(BaseModel):
+    """Schema for source dominance heatmap."""
+    sources: List[SourceContribution]
+    total_stories: int
+    date_range: Dict[str, datetime]
+
+
+class PredictionAccuracy(BaseModel):
+    """Tracking prediction accuracy over time."""
+    prediction_id: str
+    original_prediction: str
+    story_id: int
+    created_at: datetime
+    status: str  # "pending", "confirmed", "rejected", "ongoing"
+    related_story_ids: List[int]
+
+
+class PredictionTrackingResponse(BaseModel):
+    """Schema for prediction tracking."""
+    predictions: List[PredictionAccuracy]
+    total_predictions: int
+    confirmed_count: int
+    accuracy_rate: Optional[float] = None
+
+
+class TrendAnalyticsResponse(BaseModel):
+    """Complete trend analytics response."""
+    sentiment_trends: SentimentTrendResponse
+    keyword_cloud: KeywordCloudResponse
+    absurdity_trends: AbsurdityTrendResponse
+    source_dominance: SourceDominanceResponse
+    prediction_tracking: Optional[PredictionTrackingResponse] = None
+    date_range: Dict[str, datetime]
+    total_stories_analyzed: int
+
+
+# Search Schemas
+
+class SearchResultItem(BaseModel):
+    """A single search result."""
+    id: int
+    created_at: str
+    summary: str
+    snippet: str
+    match_type: str
+
+
+class FeedSearchResult(BaseModel):
+    """Feed item search result."""
+    id: int
+    title: str
+    feed_name: str
+    published_at: Optional[str] = None
+    snippet: str
+
+
+class SearchResponse(BaseModel):
+    """Search results response."""
+    query: str
+    total_results: int
+    offset: int
+    limit: int
+    results: List[SearchResultItem]
+    feed_results: List[FeedSearchResult]
+
+
+class EntityInfo(BaseModel):
+    """Information about a tracked entity."""
+    name: str
+    count: int
+    category: str
+
+
+class EntityCategoryResults(BaseModel):
+    """Entities grouped by category."""
+    people: List[EntityInfo]
+    places: List[EntityInfo]
+    organizations: List[EntityInfo]
+    concepts: List[EntityInfo]
+
+
+class EntitiesResponse(BaseModel):
+    """Entity tracking response."""
+    total_stories_analyzed: int
+    entities: EntityCategoryResults
+
+
+class TimelineEvent(BaseModel):
+    """A single event in an entity timeline."""
+    story_id: int
+    created_at: str
+    summary: str
+    snippet: str
+
+
+class EntityTimelineResponse(BaseModel):
+    """Timeline of an entity's mentions."""
+    entity: str
+    occurrences: int
+    timeline: List[TimelineEvent]
+
+
+class RelatedStory(BaseModel):
+    """A related story."""
+    id: int
+    created_at: str
+    summary: str
+    matching_keyword: str
+
+
+class RelatedStoriesResponse(BaseModel):
+    """Related stories response."""
+    story_id: int
+    related_stories: List[RelatedStory]
