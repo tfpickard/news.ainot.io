@@ -84,7 +84,7 @@
 				<span class="stat-label">Avg Positive:</span>
 				<span class="stat-value positive">
 					{getPercentage(
-						data.positive_trend.reduce((sum: number, p: any) => sum + p.value, 0) /
+						data.positive_trend.reduce((sum, p) => sum + p.value, 0) /
 							data.positive_trend.length
 					)}
 				</span>
@@ -93,7 +93,7 @@
 				<span class="stat-label">Avg Neutral:</span>
 				<span class="stat-value neutral">
 					{getPercentage(
-						data.neutral_trend.reduce((sum: number, p: any) => sum + p.value, 0) /
+						data.neutral_trend.reduce((sum, p) => sum + p.value, 0) /
 							data.neutral_trend.length
 					)}
 				</span>
@@ -102,7 +102,7 @@
 				<span class="stat-label">Avg Negative:</span>
 				<span class="stat-value negative">
 					{getPercentage(
-						data.negative_trend.reduce((sum: number, p: any) => sum + p.value, 0) /
+						data.negative_trend.reduce((sum, p) => sum + p.value, 0) /
 							data.negative_trend.length
 					)}
 				</span>
